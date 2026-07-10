@@ -38,45 +38,12 @@
               <path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" />
               <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
             </svg>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger mt-2 ms-n2">
-              2
-              <span class="visually-hidden">unread messages</span>
-            </span>
+
           </a>
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-md p-0">
             <ul class="list-unstyled p-0 m-0">
-              <li class="p-3 border-bottom ">
-                <div class="d-flex gap-3">
-                  <img src="./assets/images/avatar/avatar-1.jpg" alt="" class="avatar avatar-sm rounded-circle" />
-                  <div class="flex-grow-1 small">
-                    <p class="mb-0">New order received</p>
-                    <p class="mb-1">Order #12345 has been placed</p>
-                    <div class="text-secondary">5 minutes ago</div>
-                  </div>
-                </div>
-              </li>
-              <li class="p-3 border-bottom ">
-                <div class="d-flex gap-3">
-                  <img src="./assets/images/avatar/avatar-4.jpg" alt="" class="avatar avatar-sm rounded-circle" />
-                  <div class="flex-grow-1 small">
-                    <p class="mb-0">New user registered</p>
-                    <p class="mb-1">User @john_doe has signed up</p>
-                    <div class="text-secondary">30 minutes ago</div>
-                  </div>
-              </li>
-
-              <li class="p-3 border-bottom">
-                <div class="d-flex gap-3">
-                  <img src="./assets/images/avatar/avatar-2.jpg" alt="" class="avatar avatar-sm rounded-circle" />
-                  <div class="flex-grow-1 small">
-                    <p class="mb-0">Payment confirmed</p>
-                    <p class="mb-1">Payment of $299 has been received</p>
-                    <div class="text-secondary">1 hour ago</div>
-                  </div>
-                </div>
-              </li>
-              <li class="px-4 py-3 text-center">
-                <a href="#" class="text-primary ">View all notifications</a>
+              <li class="px-4 py-3 text-center text-muted">
+                No new notifications
               </li>
             </ul>
           </div>
@@ -84,37 +51,22 @@
         <!-- Dropdown -->
         <li class="ms-3 dropdown">
           <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="./assets/images/avatar/avatar-1.jpg" alt="" class="avatar avatar-sm rounded-circle" />
+            <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" class="avatar avatar-sm rounded-circle bg-light" id="userAvatarDropdown" />
           </a>
           <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 200px;">
             <div>
               <div class="d-flex gap-3 align-items-center border-dashed border-bottom px-3 py-3">
-                <img src="./assets/images/avatar/avatar-1.jpg" alt="" class="avatar avatar-md rounded-circle" />
+                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" class="avatar avatar-md rounded-circle bg-light" id="userAvatarMenu" />
                 <div>
-                  <h4 class="mb-0 small">Shrina Tesla</h4>
-                  <p class="mb-0  small">@imshrina</p>
+                  <h4 class="mb-0 small" id="userProfileName">Loading...</h4>
                 </div>
               </div>
               <div class="p-3 d-flex flex-column gap-1 small lh-lg">
                 <a href="#!" class="">
-
-                  <span>Home</span>
-                </a>
-                <a href="#!" class="">
-
-                  <span> Inbox</span>
-                </a>
-                <a href="#!" class="">
-
-                  <span> Chat</span>
-                </a>
-                <a href="#!" class="">
-
-                  <span> Activity</span>
-                </a>
-                <a href="#!" class="">
-
                   <span> Account Settings</span>
+                </a>
+                <a href="signin.html" class="">
+                  <span> Log out</span>
                 </a>
               </div>
 
@@ -135,7 +87,7 @@
       </a>
     </div>
     <ul class="nav flex-column">
-      <li class="px-4 py-2"><small class="nav-text">Main</small></li>
+
       <li><a class="nav-link" href="index.html"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a>
       </li>
       <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
@@ -145,9 +97,7 @@
             class="nav-text">Resources</span></a></li>
 
 
-      <li class="px-4 pt-4 pb-2"><small class="nav-text">Account</small></li>
-      <li><a class="nav-link" href="signin.html"><i class="ti ti-logout"></i><span class="nav-text">Log out</span></a>
-      </li>
+
     </ul>
 
   </aside>

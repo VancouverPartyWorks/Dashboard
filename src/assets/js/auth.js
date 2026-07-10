@@ -125,6 +125,34 @@ function applyRolePermissions(roleId) {
   }
 }
 
+function updateUserProfileUI(userData) {
+  const nameEl = document.getElementById('userProfileName');
+  const roleEl = document.getElementById('userProfileRole');
+  const avatarDropdownEl = document.getElementById('userAvatarDropdown');
+  const avatarMenuEl = document.getElementById('userAvatarMenu');
+
+  if (nameEl) nameEl.textContent = userData.displayName || 'User';
+  
+  let roleText = 'User';
+  let avatarNum = 1;
+  if (userData.roleId === 1) {
+    roleText = 'Super Admin';
+    avatarNum = 1;
+  } else if (userData.roleId === 2) {
+    roleText = 'Admin';
+    avatarNum = 2;
+  } else if (userData.roleId === 3) {
+    roleText = 'Manager';
+    avatarNum = 3;
+  }
+  
+  if (roleEl) roleEl.textContent = roleText;
+  
+  const avatarSrc = `./assets/images/avatar/avatar-${avatarNum}.jpg`;
+  if (avatarDropdownEl) avatarDropdownEl.src = avatarSrc;
+  if (avatarMenuEl) avatarMenuEl.src = avatarSrc;
+}
+
 function applyAuthGuard() {
   onAuthStateChanged(auth, async (user) => {
     const currentPage = getCurrentPage();
@@ -146,6 +174,7 @@ function applyAuthGuard() {
         }
         const userData = querySnapshot.docs[0].data();
         applyRolePermissions(userData.roleId);
+        updateUserProfileUI(userData);
       } catch (error) {
         console.error("Error checking user access:", error);
         await signOut(auth);
@@ -290,10 +319,10 @@ function setupLogoutLinks() {
   onAuthStateChanged(auth, (user) => {
     const signinLinks = document.querySelectorAll('a[href="signin.html"]');
     signinLinks.forEach((link) => {
-      const navText = link.querySelector('.nav-text');
-      if (!navText) return;
-
-      navText.textContent = user ? 'Log out' : 'Log in';
+      const textEl = link.querySelector('.nav-text') || link.querySelector('span');
+      if (textEl) {
+        textEl.textContent = user ? 'Log out' : 'Log in';
+      }
       link.onclick = null;
 
       if (!user) return;
