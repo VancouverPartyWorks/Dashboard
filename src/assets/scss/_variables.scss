@@ -12,35 +12,36 @@ $gray-800: #262626 !default;
 $gray-900: #171717 !default;
 $gray-950: #0a0a0a !default;
 
-$orange:       #E66239 !default;
-$red:          #FB2C36 !default;
-$green:        #00C951 !default;
-$cyan:         #00B8DB !default;
-$yellow:       #F0B100 !default;
+$orange: #E66239 !default;
+$red: #FB2C36 !default;
+$green: #00C951 !default;
+$cyan: #00B8DB !default;
+$yellow: #F0B100 !default;
 
+$blue: #1455d2 !default;
 
-$primary:       $orange !default;
-$secondary:     $gray-600 !default;
-$success:       $green !default;
-$info:          $cyan !default;
-$warning:       $yellow !default;
-$danger:        $red !default;
+$primary: $blue !default;
+$secondary: $gray-600 !default;
+$success: $green !default;
+$info: $cyan !default;
+$warning: $yellow !default;
+$danger: $red !default;
 
-$min-contrast-ratio:   2.5 !default;
-$link-hover-decoration:                   none !default;
-$link-color:                              $gray-700 !default;
-$link-hover-color:                        $primary !default;
+$min-contrast-ratio: 2.5 !default;
+$link-hover-decoration: none !default;
+$link-color: $gray-700 !default;
+$link-hover-color: $primary !default;
 
 
 $light: $gray-100 !default;
 $border-color: $gray-200 !default;
-$border-color-translucent:   $gray-200 !default;
+$border-color-translucent: $gray-200 !default;
 
 $enable-negative-margins: true !default;
-$enable-rounded:              true !default;
+$enable-rounded: true !default;
 
 $headings-font-weight: 400 !default;
-$grid-gutter-width:           2.5rem !default;
+$grid-gutter-width: 2.5rem !default;
 
 // scss-docs-start position-map
 $position-values: (
@@ -48,13 +49,12 @@ $position-values: (
    10: 10%,
    25: 25%,
    50: 50%,
-    60: 60%,
-    65:65%,
-    70: 70%,
+   60: 60%,
+   65:65%,
+   70: 70%,
    75: 75%,
    100: 100%,
-   auto: auto
-) !default;
+   auto: auto) !default;
 // scss-docs-end position-map
 
 
@@ -84,23 +84,24 @@ $spacers: (
    // 96px
    11: $spacer * 8,
    // 128px
-) !default;
+   ) !default;
 // scss-docs-end spacer-variables-maps
 
-$font-family-base: 'Poppins', sans-serif !default;
-$font-size-root:              null !default;
-$font-size-base:              .875rem !default; // Assumes the browser default, typically `16px`
-$font-size-sm:                $font-size-base * .85 !default;
-$font-size-lg:                $font-size-base * 1.25 !default;
+$font-family-base: 'Poppins',
+   sans-serif !default;
+$font-size-root: null !default;
+$font-size-base: .875rem !default; // Assumes the browser default, typically `16px`
+$font-size-sm: $font-size-base * .85 !default;
+$font-size-lg: $font-size-base * 1.25 !default;
 
 $font-xs: 0.75rem !default;
 
-$h1-font-size:                $font-size-base * 2.5 !default;
-$h2-font-size:                $font-size-base * 2 !default;
-$h3-font-size:                $font-size-base * 1.75 !default;
-$h4-font-size:                $font-size-base * 1.5 !default;
-$h5-font-size:                $font-size-base * 1.25 !default;
-$h6-font-size:                $font-size-base !default;
+$h1-font-size: $font-size-base * 2.5 !default;
+$h2-font-size: $font-size-base * 2 !default;
+$h3-font-size: $font-size-base * 1.75 !default;
+$h4-font-size: $font-size-base * 1.5 !default;
+$h5-font-size: $font-size-base * 1.25 !default;
+$h6-font-size: $font-size-base !default;
 
 // scss-docs-start border-radius-variables
 
@@ -109,13 +110,13 @@ $h6-font-size:                $font-size-base !default;
 
 $input-btn-padding-y: 0.5rem !default;
 $input-btn-padding-x: .875rem !default;
-$table-th-font-weight:         400!default;
+$table-th-font-weight: 400 !default;
 
 
 
-$link-decoration:                         none !default;
+$link-decoration: none !default;
 
-$link-hover-decoration:                   underline !default;
+$link-hover-decoration: underline !default;
 
 
 // Icon

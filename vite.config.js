@@ -8,11 +8,19 @@ const htmlFiles = glob.sync('./src/**/*.html')
 export default defineConfig({
    base: './',
    root: resolve(__dirname, 'src'),   // ✅ keeps dev server working
+   envDir: resolve(__dirname, './'),  // Load .env from project root
    server: {
     host: true,
     port: 3000,
     hot: true,
     open: true,
+    proxy: {
+      '/io-api': {
+        target: 'https://rental.software/api6',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/io-api/, '')
+      }
+    }
   },
   css: {
     preprocessorOptions: {

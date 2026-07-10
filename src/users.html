@@ -3,10 +3,11 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Documentation - Dashboard</title>
+  <title>Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="./assets/images/favicon.png">
   <link rel="stylesheet" href="./assets/scss/style.scss">
+
 </head>
 
 <body>
@@ -137,11 +138,14 @@
       <li class="px-4 py-2"><small class="nav-text">Main</small></li>
       <li><a class="nav-link" href="index.html"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a>
       </li>
-      <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
+      <li><a class="nav-link active" href="users.html"><i class="ti ti-users"></i><span
+            class="nav-text">Users</span></a></li>
       <li><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
             class="nav-text">Shifts</span></a></li>
       <li class="" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i class="ti ti-video"></i><span
             class="nav-text">Resources</span></a></li>
+
+
       <li class="px-4 pt-4 pb-2"><small class="nav-text">Account</small></li>
       <li><a class="nav-link" href="signin.html"><i class="ti ti-logout"></i><span class="nav-text">Log out</span></a>
       </li>
@@ -152,110 +156,152 @@
   <!-- MAIN CONTENT -->
   <main id="content" class="content py-10">
     <div class="container-fluid">
-      <div class="row">
+      <div class="row ">
         <div class="col-12">
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-            <div class="">
-              <h1 class="fs-3 mb-1">Documentation</h1>
-              <p>
-                This documentation will guide you through the setup and usage of the Dashboard template.
-              </p>
+          <div class="mb-6">
+            <h1 class="fs-3 mb-1">Users</h1>
+            <p>Manage Vancouver Partyworks Users</p>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center px-4 py-3">
+              <h4 class="mb-0 h5">Users Management</h4>
+              <div class="d-flex gap-2">
+                <input type="text" id="searchUserInput" class="form-control form-control-sm" placeholder="Search users..." style="max-width: 200px;">
+                <button class="btn btn-primary btn-sm text-nowrap d-none" id="addUserBtn" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                  <i class="ti ti-plus"></i> Add User
+                </button>
+              </div>
             </div>
-
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover table-borderless mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">Name</th>
+                      <th scope="col">Contact Info</th>
+                      <th scope="col">Role</th>
+                      <th scope="col">Status</th>
+                      <th scope="col" class="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usersTableBody">
+                    <tr>
+                      <td colspan="5" class="text-center py-4 text-muted">No users found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="row">
-        <div class="col-12">
-          <div class="">
-            <div class="">
-
-
-
-              <!-- Prerequisites -->
-              <div class="mb-4">
-                <div class="mb-2">
-                  <h2 class="h5 mb-1">Prerequisites</h2>
-                  <p>Before you begin, ensure you have the following installed:</p>
+      <!-- Add User Modal -->
+      <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form id="addUserForm">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label for="userName" class="form-label">Full Name</label>
+                  <input type="text" class="form-control" id="userName" required>
                 </div>
-                <ul class="list-group list-group-flush">
-                  <li class="list-group-item ps-0">Node.js (v14 or higher)</li>
-                  <li class="list-group-item ps-0">npm or yarn package manager</li>
-                  <li class="list-group-item ps-0">[Any other specific tools/dependencies]</li>
-                </ul>
+                <div class="mb-3">
+                  <label for="userRole" class="form-label">Role</label>
+                  <select class="form-select" id="userRole" required>
+                    <option value="" disabled selected>Select a role...</option>
+                  </select>
+                </div>
+                <div class="mb-3" id="emailFieldContainer" style="display: none;">
+                  <label for="userEmail" class="form-label">Email</label>
+                  <input type="email" class="form-control" id="userEmail">
+                </div>
+                <div class="mb-3" id="phoneFieldContainer" style="display: none;">
+                  <label for="userPhone" class="form-label">Phone Number</label>
+                  <input type="tel" class="form-control" id="userPhone">
+                </div>
               </div>
-
-              <!-- Installation -->
-              <div class="mb-4">
-                <h2 class="h5 mb-2">Installation</h2>
-                <ol class="list-group list-group-numbered list-group-flush">
-                  <li class="list-group-item ps-0">Clone the repository or download the template</li>
-                  <li class="list-group-item ps-0">Navigate to the project directory</li>
-                  <li class="list-group-item ps-0">
-                    Install dependencies:
-                    <pre class="bg-light border rounded p-3 mt-2"><code>npm install</code></pre>
-                  </li>
-                </ol>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save User</button>
               </div>
-
-
-
-              <!-- Usage -->
-              <div class="mb-6">
-                <h2 class="h5 mb-2">Run the app</h2>
-                <p>To start the development server:</p>
-                <pre class="bg-light border rounded p-3"><code>npm run dev</code></pre>
-              </div>
-              <!-- Next Steps -->
-              <div class="mb-4">
-                <h2 class="h5 mb-2">Next Steps</h2>
-                <ol class="list-group list-group-numbered list-group-flush">
-                  <li class="list-group-item ps-0">Review the main entry point in <code>src/js/main.js</code></li>
-                  <li class="list-group-item ps-0">Customize components according to your needs</li>
-                  <li class="list-group-item ps-0">
-                    Build for production:
-                    <pre class="bg-light border rounded p-3 mt-4"><code>npm run build</code></pre>
-                  </li>
-                </ol>
-              </div>
-
-              <!-- Project Structure -->
-              <div class="mb-4">
-                <h2 class="h5 mb-0">Project Structure</h2>
-                <pre>
-     <code>
-inapp/
-├── src/
-│   ├── assest/         # Static assets
-│   │   ├── images/     # Images
-│   │   ├── js/         # JS
-│   │   ├── scss/       # CSS and styling
-│   └── Pages           # All Pages
-├── vite.config.js/     # Config Files
-├── package.json        # Project dependencies
-├── README.md           # Documentation
-└── .gitignore          # Git ignore file
-     </code>
-     </pre>
-              </div>
-
-
-              <!-- Support -->
-              <div class="mb-2">
-                <h2 class="h5">Support</h2>
-                <p>
-                  For issues or questions, please refer to the documentation or create an issue in the repository. Also
-                  you can contact
-                  us at <a href="#!" class="text-primary">CodesCandy</a>.
-                </p>
-              </div>
-
-            </div>
+            </form>
           </div>
-
         </div>
       </div>
+
+      <!-- Edit User Modal -->
+      <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form id="editUserForm">
+              <input type="hidden" id="editUserId">
+              <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label for="editUserName" class="form-label">Full Name</label>
+                  <input type="text" class="form-control" id="editUserName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="editUserPhone" class="form-label">Phone Number</label>
+                  <input type="tel" class="form-control" id="editUserPhone" required>
+                </div>
+                <div class="mb-3">
+                  <label for="editUserRole" class="form-label">Role</label>
+                  <select class="form-select" id="editUserRole" required>
+                    <option value="admin">admin</option>
+                    <option value="lead">lead</option>
+                    <option value="staff">staff</option>
+                    <option value="driver">driver</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="editUserStatus" class="form-label">Status</label>
+                  <select class="form-select" id="editUserStatus" required>
+                    <option value="onDuty">onDuty</option>
+                    <option value="offDuty">offDuty</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update User</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete User Modal -->
+      <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+          <div class="modal-content text-center">
+            <div class="modal-body p-4">
+              <i class="ti ti-alert-circle text-danger fs-1 mb-3 d-block"></i>
+              <h5 class="mb-2">Are you sure?</h5>
+              <p class="text-muted mb-4">Do you really want to delete this user? This action cannot be undone.</p>
+              <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteUserBtn">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row">
         <div class="col-12">
           <footer class="text-center py-2 mt-6 text-secondary ">
@@ -270,6 +316,7 @@ inapp/
 
   <!-- Bootstrap JS -->
   <script src="./assets/js/main.js" type="module"></script>
+  <script src="./assets/js/users.js" type="module"></script>
 
 
 

@@ -5,8 +5,8 @@
 import ApexCharts from 'apexcharts';
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('salesPurchaseChart')) {
-         var options = {
+  if (document.getElementById('salesPurchaseChart')) {
+    var options = {
       series: [
         {
           name: 'Sales',
@@ -91,26 +91,26 @@ document.addEventListener('DOMContentLoaded', () => {
           },
         },
         title: {
-          text: '$ (thousands)' ,
+          text: '$ (thousands)',
         },
       },
       fill: {
         opacity: 1,
       },
-     tooltip: {
-    			y: {
-    				formatter: function (val) {
-    					return "$ " + val + " thousands"
-    				}
-    			}
-    		},
+      tooltip: {
+        y: {
+          formatter: function (val) {
+            return "$ " + val + " thousands"
+          }
+        }
+      },
     };
 
-var chart = new ApexCharts(document.querySelector("#salesPurchaseChart"), options);
+    var chart = new ApexCharts(document.querySelector("#salesPurchaseChart"), options);
 
-chart.render();
-    }
-      if (document.getElementById('customerChart')) {
+    chart.render();
+  }
+  if (document.getElementById('customerChart')) {
     var options = {
       series: [44, 55],
       chart: {
@@ -180,20 +180,20 @@ chart.render();
       stroke: {
         lineCap: 'round',
       },
- labels: ['First Time', 'Return' ],
+      labels: ['First Time', 'Return'],
 
     };
 
     var chart = new ApexCharts(document.querySelector('#customerChart'), options);
     chart.render();
   }
-   if (document.getElementById('salesChart')) {
-   // --- Replace these arrays with your real monthly sales numbers (12 values each) ---
+  if (document.getElementById('salesChart')) {
+    // --- Replace these arrays with your real monthly sales numbers (12 values each) ---
     const salesThisYear = [42000, 53000, 48000, 61000, 72000, 69000, 74000, 82000, 78000, 86000, 91000, 97000];
     const salesLastYear = [38000, 45000, 47000, 56000, 65000, 63000, 68000, 70000, 69000, 75000, 80000, 84000];
 
     // Categories for x-axis (months)
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     const options = {
       chart: {
@@ -233,7 +233,7 @@ chart.render();
       tooltip: {
         shared: true,
         y: {
-          formatter: function(val) { return formatCurrency(val); }
+          formatter: function (val) { return formatCurrency(val); }
         }
       },
       legend: {
@@ -266,8 +266,8 @@ chart.render();
     // Example control: Randomize data (for demo)
     document.getElementById('btn-random').addEventListener('click', () => {
       const rand = () => Math.round((Math.random() * 80 + 20) * 1000); // 20k - 100k
-      const newThisYear = Array.from({length: 12}, rand);
-      const newLastYear = Array.from({length: 12}, rand);
+      const newThisYear = Array.from({ length: 12 }, rand);
+      const newLastYear = Array.from({ length: 12 }, rand);
       chart.updateSeries([
         { name: 'This Year', data: newThisYear },
         { name: 'Last Year', data: newLastYear }

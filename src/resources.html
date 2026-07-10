@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="./assets/images/favicon.png">
+  <link rel="stylesheet" href="./assets/scss/style.scss">
+
+</head>
+
+<body>
+  <div id="overlay" class="overlay"></div>
+  <!-- TOPBAR -->
+  <nav id="topbar" class="navbar bg-white border-bottom fixed-top topbar px-3">
+    <button id="toggleBtn" class="d-none d-lg-inline-flex btn btn-light btn-icon btn-sm ">
+      <i class="ti ti-layout-sidebar-left-expand"></i>
+    </button>
+
+    <!-- MOBILE -->
+    <button id="mobileBtn" class="btn btn-light btn-icon btn-sm d-lg-none me-2">
+      <i class="ti ti-layout-sidebar-left-expand"></i>
+    </button>
+    <div>
+      <!-- Navbar nav -->
+      <ul class="list-unstyled d-flex align-items-center mb-0 gap-1">
+        <!-- Pages link -->
+
+        <!-- Bell icon -->
+        <li>
+          <a class="position-relative btn-icon btn-sm btn-light btn rounded-circle" data-bs-toggle="dropdown"
+            aria-expanded="false" href="#" role="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-bell">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" />
+              <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
+            </svg>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger mt-2 ms-n2">
+              2
+              <span class="visually-hidden">unread messages</span>
+            </span>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-md p-0">
+            <ul class="list-unstyled p-0 m-0">
+              <li class="p-3 border-bottom ">
+                <div class="d-flex gap-3">
+                  <img src="./assets/images/avatar/avatar-1.jpg" alt="" class="avatar avatar-sm rounded-circle" />
+                  <div class="flex-grow-1 small">
+                    <p class="mb-0">New order received</p>
+                    <p class="mb-1">Order #12345 has been placed</p>
+                    <div class="text-secondary">5 minutes ago</div>
+                  </div>
+                </div>
+              </li>
+              <li class="p-3 border-bottom ">
+                <div class="d-flex gap-3">
+                  <img src="./assets/images/avatar/avatar-4.jpg" alt="" class="avatar avatar-sm rounded-circle" />
+                  <div class="flex-grow-1 small">
+                    <p class="mb-0">New user registered</p>
+                    <p class="mb-1">User @john_doe has signed up</p>
+                    <div class="text-secondary">30 minutes ago</div>
+                  </div>
+              </li>
+
+              <li class="p-3 border-bottom">
+                <div class="d-flex gap-3">
+                  <img src="./assets/images/avatar/avatar-2.jpg" alt="" class="avatar avatar-sm rounded-circle" />
+                  <div class="flex-grow-1 small">
+                    <p class="mb-0">Payment confirmed</p>
+                    <p class="mb-1">Payment of $299 has been received</p>
+                    <div class="text-secondary">1 hour ago</div>
+                  </div>
+                </div>
+              </li>
+              <li class="px-4 py-3 text-center">
+                <a href="#" class="text-primary ">View all notifications</a>
+              </li>
+            </ul>
+          </div>
+        </li>
+        <!-- Dropdown -->
+        <li class="ms-3 dropdown">
+          <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="./assets/images/avatar/avatar-1.jpg" alt="" class="avatar avatar-sm rounded-circle" />
+          </a>
+          <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 200px;">
+            <div>
+              <div class="d-flex gap-3 align-items-center border-dashed border-bottom px-3 py-3">
+                <img src="./assets/images/avatar/avatar-1.jpg" alt="" class="avatar avatar-md rounded-circle" />
+                <div>
+                  <h4 class="mb-0 small">Shrina Tesla</h4>
+                  <p class="mb-0  small">@imshrina</p>
+                </div>
+              </div>
+              <div class="p-3 d-flex flex-column gap-1 small lh-lg">
+                <a href="#!" class="">
+
+                  <span>Home</span>
+                </a>
+                <a href="#!" class="">
+
+                  <span> Inbox</span>
+                </a>
+                <a href="#!" class="">
+
+                  <span> Chat</span>
+                </a>
+                <a href="#!" class="">
+
+                  <span> Activity</span>
+                </a>
+                <a href="#!" class="">
+
+                  <span> Account Settings</span>
+                </a>
+              </div>
+
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </nav>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="sidebar">
+    <div class="logo-area">
+      <a href="index.html" class="d-inline-flex">
+        <img src="./assets/images/pw_header.png" alt="Vancouver Partyworks"
+          style="max-height: 80px; width: auto; max-width: 100%;">
+      </a>
+    </div>
+    <ul class="nav flex-column">
+      <li class="px-4 py-2"><small class="nav-text">Main</small></li>
+      <li><a class="nav-link" href="index.html"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a>
+      </li>
+      <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
+      <li><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
+            class="nav-text">Shifts</span></a></li>
+      <li class="" id="resourcesNavItem"><a class="nav-link active" href="resources.html"><i class="ti ti-video"></i><span
+            class="nav-text">Resources</span></a></li>
+
+
+      <li class="px-4 pt-4 pb-2"><small class="nav-text">Account</small></li>
+      <li><a class="nav-link" href="signin.html"><i class="ti ti-logout"></i><span class="nav-text">Log out</span></a>
+      </li>
+    </ul>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main id="content" class="content py-10">
+    <div class="container-fluid">
+      <div class="row ">
+        <div class="col-12">
+          <div class="mb-6">
+            <h1 class="fs-3 mb-1">Resources</h1>
+            <p>Manage Vancouver Partyworks Resources</p>
+          </div>
+        </div>
+      </div>
+      <!-- Categories Grid -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl">
+          <div class="card h-100 resource-category-card border-primary" style="cursor: pointer;" data-folder="Manuals">
+            <div class="card-body text-center py-4">
+              <div class="mb-2">
+                <i class="ti ti-book fs-1 text-primary"></i>
+              </div>
+              <h5 class="card-title mb-0">Manuals</h5>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl">
+          <div class="card h-100 resource-category-card" style="cursor: pointer;" data-folder="Safety Docs">
+            <div class="card-body text-center py-4">
+              <div class="mb-2">
+                <i class="ti ti-gavel fs-1 text-primary"></i>
+              </div>
+              <h5 class="card-title mb-0">Safety Docs</h5>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl">
+          <div class="card h-100 resource-category-card" style="cursor: pointer;" data-folder="Featured Files">
+            <div class="card-body text-center py-4">
+              <div class="mb-2">
+                <i class="ti ti-star fs-1 text-primary"></i>
+              </div>
+              <h5 class="card-title mb-0">Featured Files</h5>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl">
+          <div class="card h-100 resource-category-card" style="cursor: pointer;" data-folder="Permits">
+            <div class="card-body text-center py-4">
+              <div class="mb-2">
+                <i class="ti ti-file-certificate fs-1 text-primary"></i>
+              </div>
+              <h5 class="card-title mb-0">Permits</h5>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl">
+          <div class="card h-100 resource-category-card" style="cursor: pointer;" data-folder="Training Videos">
+            <div class="card-body text-center py-4">
+              <div class="mb-2">
+                <i class="ti ti-video fs-1 text-primary"></i>
+              </div>
+              <h5 class="card-title mb-0">Training Videos</h5>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+              <h4 class="mb-0 h5" id="currentCategoryTitle">Manuals</h4>
+              <div>
+                <input type="file" id="fileInput" style="display: none;" />
+                <button class="btn btn-primary btn-sm" id="uploadFileBtn">
+                  <i class="ti ti-upload"></i> Upload File
+                </button>
+                <button class="btn btn-primary btn-sm d-none" id="addVideoBtn">
+                  <i class="ti ti-plus"></i> Add Video
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <!-- Upload progress bar container -->
+              <div id="uploadProgressContainer" class="p-3 border-bottom d-none">
+                <div class="d-flex justify-content-between mb-1 small">
+                  <span id="uploadFileName">Uploading...</span>
+                  <span id="uploadProgressText">0%</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                    role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover table-borderless mb-0">
+                  <thead class="table-light" id="tableHead">
+                    <tr>
+                      <th scope="col">File Name</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Size</th>
+                      <th scope="col" class="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resourcesTableBody">
+                    <tr>
+                      <td colspan="4" class="text-center py-4 text-muted">Loading resources...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add/Edit Video Modal -->
+      <div class="modal fade" id="videoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form id="videoForm" novalidate>
+              <div class="modal-header">
+                <h5 class="modal-title" id="videoModalTitle">Add Video</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <input type="hidden" id="videoId" />
+                <div class="mb-3">
+                  <label for="videoTitle" class="form-label">Title</label>
+                  <input type="text" class="form-control" id="videoTitle" required>
+                  <div class="invalid-feedback">Title is required.</div>
+                </div>
+                <div class="mb-3">
+                  <label for="videoDesc" class="form-label">Description</label>
+                  <textarea class="form-control" id="videoDesc" rows="3" required></textarea>
+                  <div class="invalid-feedback">Description is required.</div>
+                </div>
+                <div class="mb-3">
+                  <label for="videoUrl" class="form-label">YouTube URL</label>
+                  <input type="url" class="form-control" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..."
+                    required>
+                  <div class="invalid-feedback">Please enter a valid YouTube link.</div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="saveVideoBtn">Save Video</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Confirmation Modal -->
+      <div class="modal fade" id="deleteResourceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Delete File</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              Are you sure you want to delete <strong id="deleteFileName"></strong>? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12">
+          <footer class="text-center py-2 mt-6 text-secondary ">
+            <p class="mb-0">Copyright © 2026 Vancouver Partyworks</p>
+          </footer>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bootstrap JS -->
+  <script src="./assets/js/main.js" type="module"></script>
+  <script src="./assets/js/resources.js" type="module"></script>
+
+
+
+</body>
+
+</html>

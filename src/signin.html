@@ -3,16 +3,67 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Signin - InApp Inventory Dashboard</title>
+  <title>Sign In - Vancouver PartyWorks</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-   <link rel="apple-touch-icon" sizes="180x180" href="./assets/images/favicon_io/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="./assets/images/favicon_io/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="./assets/images/favicon_io/favicon-16x16.png">
-  <link rel="manifest" href="./assets/images/favicon_io/site.webmanifest">
+  <link rel="icon" type="image/png" href="./assets/images/favicon.png">
   <link rel="stylesheet" href="./assets/scss/style.scss">
 
 
 
+  <style>
+    :root {
+      --bs-primary: #2a2f6e; /* Brand Color */
+      --bs-primary-rgb: 42, 47, 110;
+      --bs-link-color: #2a2f6e;
+      --bs-link-hover-color: #1e224f;
+      --bs-body-bg: #f8f9fa; /* Light background */
+      --bs-body-color: #212529;
+    }
+    body {
+      background-color: var(--bs-body-bg) !important;
+      color: var(--bs-body-color) !important;
+    }
+    .card {
+      background-color: #ffffff !important;
+      border: 1px solid rgba(42, 47, 110, 0.1) !important;
+      box-shadow: 0 0 20px rgba(42, 47, 110, 0.1) !important;
+    }
+    .card-title, label, span {
+      color: var(--bs-body-color) !important;
+    }
+    .btn-primary {
+      background-color: var(--bs-primary) !important;
+      border-color: var(--bs-primary) !important;
+      color: #fff !important;
+      font-weight: bold !important;
+    }
+    .btn-primary:hover {
+      background-color: var(--bs-link-hover-color) !important;
+      border-color: var(--bs-link-hover-color) !important;
+      color: #fff !important;
+      box-shadow: 0 0 10px rgba(42, 47, 110, 0.3) !important;
+    }
+    .link-primary {
+      color: var(--bs-link-color) !important;
+    }
+    .text-muted {
+      color: #6c757d !important;
+    }
+    .form-control {
+      background-color: #fff !important;
+      border-color: #ced4da !important;
+      color: #212529 !important;
+    }
+    .form-control:focus {
+      background-color: #fff !important;
+      color: #212529 !important;
+      border-color: var(--bs-primary) !important;
+      box-shadow: 0 0 0 0.25rem rgba(42, 47, 110, 0.25) !important;
+    }
+    .form-control::placeholder {
+      color: #6c757d !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -22,48 +73,45 @@
   <div class="card " style="max-width:420px; width:100%;">
     <div class="card-body p-5">
       <div class="text-center mb-3">
-      <a href="index.html" class="mb-4 d-inline-block"><img src="./assets/images/logo-icon.svg" alt="" width="36">
-      <span class=" ms-2"> <img src="./assets/images/logo.svg" alt=""></span>
+      <a href="index.html" class="mb-4 d-inline-block text-decoration-none">
+          <img src="./assets/images/pw_header.png" alt="PartyWorks Logo" style="max-height: 80px; width: auto; max-width: 100%;">
       </a>
         <h1 class="card-title mb-5 h5">Sign in to your account</h1>
 
       </div>
 
-      <form class="needs-validation mt-3" novalidate>
-        <div class="mb-3">
-          <label for="email" class="form-label">Email address</label>
-          <input id="email" type="email" class="form-control" placeholder="name@example.com" value="irtiqa@admin.com" required autofocus>
-          <div class="invalid-feedback">Please enter a valid email.</div>
-        </div>
-
-        <div class="mb-3">
-          <label for="password" class="form-label d-flex justify-content-between">
-            <span>Password</span>
-            <a href="#" class="small link-primary">Forgot Password?</a>
-          </label>
-          <input id="password" type="password" class="form-control" placeholder="Password" value="Admin123" required minlength="6">
-          <div class="invalid-feedback">Please provide a password (min 6 characters).</div>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div class="form-check">
-            <input id="remember" class="form-check-input" type="checkbox">
-            <label class="form-check-label small" for="remember">Remember me</label>
+      <form class="needs-validation mt-3" id="emailAuthForm" novalidate>
+        <div id="emailInputContainer">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input id="email" type="email" class="form-control" placeholder="admin@vancouverpartyworks.com" required autofocus autocomplete="email">
+            <div class="invalid-feedback">Please enter a valid email address.</div>
           </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <div class="input-group">
+              <input id="password" type="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+              <button class="btn btn-outline-secondary" type="button" data-toggle-password="password" aria-label="Show password" aria-pressed="false">
+                <i class="ti ti-eye"></i>
+              </button>
+              <div class="invalid-feedback">Please enter your password.</div>
+            </div>
+          </div>
+          <button class="btn btn-primary w-100" type="submit" id="signInButton">Sign In</button>
         </div>
 
-        <button class="btn btn-primary w-100" type="submit">Sign in</button>
         <div id="loginError" class="alert alert-danger mt-3 mb-0 d-none" role="alert"></div>
       </form>
 
-      <div class="text-center mt-3 small text-muted">
-        Don't have an account? <a href="signup.html"  class="link-primary">Sign up</a>
       </div>
     </div>
   </div>
 </div>
 
 
+<footer class="text-center py-3 text-secondary position-absolute bottom-0 w-100">
+  <p class="mb-0">Copyright © 2026 Vancouver Partyworks</p>
+</footer>
 
   <!-- Bootstrap JS -->
   <script src="./assets/js/main.js" type="module"></script>
@@ -71,4 +119,4 @@
 
 </body>
 
-</html>""
+</html>
