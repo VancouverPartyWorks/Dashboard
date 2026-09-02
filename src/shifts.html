@@ -121,6 +121,9 @@
               <h4 class="mb-0 h5" id="tableTitle">Shifts Management</h4>
               <div class="d-flex gap-2">
                 <input type="text" id="searchShiftInput" class="form-control form-control-sm" placeholder="Search by venue name..." style="max-width: 200px;">
+                <button class="btn btn-outline-primary btn-sm d-none text-nowrap" id="notifyUnconfirmedBtn" data-bs-toggle="modal" data-bs-target="#sendPushNotificationModal">
+                  <i class="ti ti-bell-ringing"></i> Notify Unconfirmed
+                </button>
                 <button class="btn btn-primary btn-sm d-none text-nowrap" id="createShiftBtn" data-bs-toggle="modal" data-bs-target="#addShiftModal">
                   <i class="ti ti-plus"></i> Create Shift
                 </button>
@@ -274,6 +277,79 @@
               <button type="button" class="btn btn-danger" id="confirmDeleteShiftBtn">Delete</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Send Push Notification Modal -->
+    <div class="modal fade" id="sendPushNotificationModal" tabindex="-1" aria-labelledby="sendPushNotificationModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <form id="sendPushNotificationForm">
+            <input type="hidden" id="pushNotificationShiftId">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title d-flex align-items-center gap-2 text-white" id="sendPushNotificationModalLabel">
+                <i class="ti ti-bell-ringing fs-4"></i> Send Push Notification
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+              <!-- Target summary alert -->
+              <div class="alert alert-light border d-flex align-items-start gap-3 mb-3" id="pushTargetSummaryBox">
+                <div class="p-2 bg-primary-subtle text-primary rounded-circle">
+                  <i class="ti ti-calendar-event fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <h6 class="mb-1 fw-bold text-dark" id="pushTargetTitle">Targeting: Unconfirmed Shifts</h6>
+                  <p class="mb-0 small text-muted" id="pushTargetSubtitle">Sending notification to all users assigned to unconfirmed shifts.</p>
+                </div>
+              </div>
+
+              <!-- Title Input -->
+              <div class="mb-3">
+                <label for="pushNotificationTitle" class="form-label fw-semibold">Notification Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="pushNotificationTitle" required maxlength="100" placeholder="e.g., Shift Confirmation Reminder">
+              </div>
+
+              <!-- Body / Message Textarea -->
+              <div class="mb-3">
+                <label for="pushNotificationBody" class="form-label fw-semibold">Notification Message <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="pushNotificationBody" rows="3" required maxlength="300" placeholder="Enter message text..."></textarea>
+                <div class="form-text small text-muted">Include venue details and call to action for the staff.</div>
+              </div>
+
+              <!-- Recipients List -->
+              <div class="mb-2">
+                <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+                  <span>Recipients (<span id="pushRecipientsCount">0</span> users)</span>
+                  <span class="badge bg-secondary-subtle text-secondary fw-normal small" id="pushUnconfirmedBadge">Status: Unconfirmed</span>
+                </label>
+                <div class="border rounded p-2 bg-light-subtle" id="pushRecipientsContainer" style="max-height: 180px; overflow-y: auto;">
+                  <div class="text-muted small py-2 text-center">Loading recipient staff...</div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer bg-light">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" id="sendPushNotificationSubmitBtn">
+                <i class="ti ti-send"></i>
+                <span id="sendPushNotificationBtnText">Send Push Notification</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+      <div id="pushNotificationToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body d-flex align-items-center gap-2" id="pushNotificationToastBody">
+            <i class="ti ti-circle-check fs-5"></i>
+            <span id="pushNotificationToastText">Push notification sent successfully!</span>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
       </div>
     </div>

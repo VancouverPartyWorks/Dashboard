@@ -19,6 +19,11 @@ export default defineConfig({
         target: 'https://rental.software/api6',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/io-api/, '')
+      },
+      '/storage-proxy': {
+        target: 'https://firebasestorage.googleapis.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/storage-proxy/, '')
       }
     }
   },

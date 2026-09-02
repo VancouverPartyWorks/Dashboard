@@ -121,13 +121,14 @@
                     <tr>
                       <th scope="col">Lead</th>
                       <th scope="col">Date & Time</th>
+                      <th scope="col">Title</th>
                       <th scope="col">Receipt</th>
                       <th scope="col" id="actionColumnHeader">Action</th>
                     </tr>
                   </thead>
                   <tbody id="receiptsTableBody">
                     <tr>
-                      <td colspan="4" class="text-center py-4 text-muted">Loading receipts...</td>
+                      <td colspan="5" class="text-center py-4 text-muted">Loading receipts...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -141,8 +142,17 @@
       <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
           <div class="modal-content">
-            <div class="modal-body p-0 text-center">
-              <img id="modalImage" src="" class="img-fluid" style="max-height: 90vh;">
+            <div class="modal-header position-relative justify-content-center border-bottom px-4 py-3">
+              <h5 class="modal-title text-center text-truncate mb-0 px-5" id="imageModalTitle" style="max-width: 70%;">Receipt</h5>
+              <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 text-center bg-light">
+              <img id="modalImage" src="" class="img-fluid rounded shadow-sm" style="max-height: 75vh; object-fit: contain;">
+            </div>
+            <div class="modal-footer justify-content-center border-top px-4 py-3">
+              <button type="button" class="btn btn-primary d-inline-flex align-items-center" id="modalDownloadBtn">
+                <i class="ti ti-download me-1"></i> Download
+              </button>
             </div>
           </div>
         </div>

@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (createShiftBtn && canManageShifts) {
                         createShiftBtn.classList.remove('d-none');
                     }
+                    const notifyUnconfirmedBtn = document.getElementById('notifyUnconfirmedBtn');
+                    if (notifyUnconfirmedBtn && canManageShifts) {
+                        notifyUnconfirmedBtn.classList.remove('d-none');
+                    }
                     
                     // Re-render table if shifts are already loaded
                     if (allShifts.length > 0) {
@@ -299,8 +303,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            const isUnconfirmed = (status || '').toLowerCase() === 'unconfirmed';
+            const notifyBtn = (canManageShifts && isUnconfirmed) ? `
+                <button class="btn btn-sm btn-outline-primary notify-shift-btn me-1"
+                    data-id="${shift.id}"
+                    data-venue="${venue}"
+                    data-date="${dateDisplay}"
+                    data-location="${loc}"
+                    title="Send push notification to unconfirmed users">
+                    <i class="ti ti-bell-ringing"></i>
+                </button>` : '';
+
             const actionCell = canManageShifts ? `
-                <td class="text-end">
+                <td class="text-end text-nowrap">
+                    ${notifyBtn}
                     <button class="btn btn-sm btn-outline-secondary edit-shift-btn"
                         data-id="${shift.id}"
                         data-venue="${venue}"
@@ -308,11 +324,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         data-location="${loc}"
                         data-role="${role}"
                         data-status="${status}"
-                        data-assigned="${assigned}">
+                        data-assigned="${assigned}"
+                        title="Edit Shift">
                         <i class="ti ti-edit"></i>
                     </button>
                     <button class="btn btn-sm btn-outline-danger delete-shift-btn ms-1"
-                        data-id="${shift.id}">
+                        data-id="${shift.id}"
+                        title="Delete Shift">
                         <i class="ti ti-trash"></i>
                     </button>
                 </td>` : '';
@@ -604,6 +622,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let shiftToDeleteId = null;
 
     shiftsTableBody.addEventListener('click', async (e) => {
+        const notifyBtn = e.target.closest('.notify-shift-btn');
+        if (notifyBtn) {
+            const shiftId = notifyBtn.dataset.id;
+            openPushNotificationModal(shiftId);
+            return;
+        }
+
         const deleteBtn = e.target.closest('.delete-shift-btn');
         if (deleteBtn) {
             shiftToDeleteId = deleteBtn.dataset.id;
@@ -680,6 +705,238 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error deleting shift:", error);
                 alert("Failed to delete shift.");
+            }
+        });
+    }
+
+    // ==========================================
+    // PUSH NOTIFICATION FOR UNCONFIRMED SHIFTS
+    // ==========================================
+    let currentPushRecipients = [];
+
+    async function openPushNotificationModal(targetShiftId) {
+        if (allUsersList.length === 0) {
+            await fetchRolesAndUsers();
+        }
+
+        const isAll = targetShiftId === 'ALL_UNCONFIRMED';
+        const targetTitle = document.getElementById('pushTargetTitle');
+        const targetSubtitle = document.getElementById('pushTargetSubtitle');
+        const shiftIdInput = document.getElementById('pushNotificationShiftId');
+        const titleInput = document.getElementById('pushNotificationTitle');
+        const bodyInput = document.getElementById('pushNotificationBody');
+        const recipientsContainer = document.getElementById('pushRecipientsContainer');
+        const recipientsCount = document.getElementById('pushRecipientsCount');
+        const submitBtn = document.getElementById('sendPushNotificationSubmitBtn');
+
+        if (shiftIdInput) shiftIdInput.value = targetShiftId;
+
+        const targetUserIds = new Set();
+        let defaultTitle = 'Shift Confirmation Reminder';
+        let defaultBody = '';
+
+        if (isAll) {
+            const unconfirmedShifts = allShifts.filter(s => (s.status || '').toLowerCase() === 'unconfirmed');
+            unconfirmedShifts.forEach(shift => {
+                if (shift.assignedUserId) targetUserIds.add(shift.assignedUserId);
+                if (Array.isArray(shift.staffMembers)) {
+                    shift.staffMembers.forEach(m => {
+                        if (m && m.id) targetUserIds.add(m.id);
+                    });
+                }
+                if (Array.isArray(shift.staff)) {
+                    shift.staff.forEach(id => {
+                        if (id) targetUserIds.add(id);
+                    });
+                }
+            });
+
+            if (targetTitle) targetTitle.textContent = `Targeting: All Unconfirmed Shifts (${unconfirmedShifts.length} shifts)`;
+            if (targetSubtitle) targetSubtitle.textContent = 'Sending notification to all users assigned to unconfirmed shifts.';
+            defaultBody = 'You have one or more unconfirmed shifts scheduled. Please open the Vancouver PartyWorks app to review and confirm your availability.';
+        } else {
+            const targetShift = allShifts.find(s => s.id === targetShiftId);
+            const venue = targetShift ? (targetShift.venueName || 'Upcoming Event') : 'Shift';
+            let dateDisplay = 'Upcoming';
+            if (targetShift && targetShift.dateTime) {
+                if (typeof targetShift.dateTime.toDate === 'function') {
+                    dateDisplay = targetShift.dateTime.toDate().toLocaleString();
+                } else if (targetShift.dateTime.seconds) {
+                    dateDisplay = new Date(targetShift.dateTime.seconds * 1000).toLocaleString();
+                } else if (typeof targetShift.dateTime === 'string') {
+                    dateDisplay = targetShift.dateTime;
+                }
+            }
+
+            if (targetShift) {
+                if (targetShift.assignedUserId) targetUserIds.add(targetShift.assignedUserId);
+                if (Array.isArray(targetShift.staffMembers)) {
+                    targetShift.staffMembers.forEach(m => {
+                        if (m && m.id) targetUserIds.add(m.id);
+                    });
+                }
+                if (Array.isArray(targetShift.staff)) {
+                    targetShift.staff.forEach(id => {
+                        if (id) targetUserIds.add(id);
+                    });
+                }
+            }
+
+            if (targetTitle) targetTitle.textContent = `Targeting: ${venue}`;
+            if (targetSubtitle) targetSubtitle.textContent = `Date: ${dateDisplay} | Meeting Location: ${targetShift ? (targetShift.meetingLocation || 'N/A') : 'N/A'}`;
+            defaultBody = `You have an unconfirmed shift at ${venue} on ${dateDisplay}. Please open the PartyWorks app to confirm your shift.`;
+        }
+
+        if (titleInput) titleInput.value = defaultTitle;
+        if (bodyInput) bodyInput.value = defaultBody;
+
+        // Resolve recipients
+        currentPushRecipients = [];
+        targetUserIds.forEach(uid => {
+            const foundUser = allUsersList.find(u => u.id === uid);
+            if (foundUser) {
+                currentPushRecipients.push(foundUser);
+            } else {
+                currentPushRecipients.push({
+                    id: uid,
+                    displayName: `Staff User (${uid.substring(0, 6)}...)`,
+                    displayRole: 'Staff Member',
+                    email: '',
+                    phoneNumber: ''
+                });
+            }
+        });
+
+        if (recipientsCount) recipientsCount.textContent = currentPushRecipients.length;
+
+        if (recipientsContainer) {
+            recipientsContainer.innerHTML = '';
+            if (currentPushRecipients.length === 0) {
+                recipientsContainer.innerHTML = `
+                    <div class="alert alert-warning small mb-0 py-2">
+                        <i class="ti ti-alert-triangle me-1"></i> No staff members are currently assigned to this shift. Please edit the shift to assign staff first.
+                    </div>`;
+                if (submitBtn) submitBtn.disabled = true;
+            } else {
+                if (submitBtn) submitBtn.disabled = false;
+                currentPushRecipients.forEach(user => {
+                    const row = document.createElement('div');
+                    row.className = 'd-flex justify-content-between align-items-center p-2 mb-1 rounded border bg-white';
+                    
+                    const name = user.displayName || user.email || user.phoneNumber || user.id;
+                    const role = user.displayRole || user.role || 'Staff';
+                    const contact = user.email || user.phoneNumber || 'No contact info';
+
+                    row.innerHTML = `
+                        <div class="d-flex align-items-center gap-2 text-truncate">
+                            <div class="avatar avatar-xs rounded-circle bg-primary-subtle text-primary fw-bold text-center d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem; flex-shrink: 0;">
+                                ${(name[0] || 'U').toUpperCase()}
+                            </div>
+                            <div class="text-truncate">
+                                <div class="fw-semibold text-dark small text-truncate">${name}</div>
+                                <div class="text-muted small" style="font-size: 0.75rem;">${role} &bull; ${contact}</div>
+                            </div>
+                        </div>
+                    `;
+                    recipientsContainer.appendChild(row);
+                });
+            }
+        }
+
+        const modalEl = document.getElementById('sendPushNotificationModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    }
+
+    const notifyUnconfirmedBtn = document.getElementById('notifyUnconfirmedBtn');
+    if (notifyUnconfirmedBtn) {
+        notifyUnconfirmedBtn.addEventListener('click', () => {
+            openPushNotificationModal('ALL_UNCONFIRMED');
+        });
+    }
+
+    function showNotificationToast(msg, isSuccess = true) {
+        const toastEl = document.getElementById('pushNotificationToast');
+        const toastText = document.getElementById('pushNotificationToastText');
+        if (toastEl) {
+            toastEl.className = `toast align-items-center text-bg-${isSuccess ? 'success' : 'danger'} border-0`;
+            if (toastText) toastText.textContent = msg;
+            const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4500 });
+            toast.show();
+        }
+    }
+
+    const sendPushForm = document.getElementById('sendPushNotificationForm');
+    if (sendPushForm) {
+        sendPushForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('sendPushNotificationSubmitBtn');
+            const btnText = document.getElementById('sendPushNotificationBtnText');
+            const shiftId = document.getElementById('pushNotificationShiftId').value;
+            const title = document.getElementById('pushNotificationTitle').value.trim();
+            const body = document.getElementById('pushNotificationBody').value.trim();
+
+            if (!currentPushRecipients || currentPushRecipients.length === 0) {
+                alert('No assigned staff found to send push notification.');
+                return;
+            }
+
+            if (submitBtn) submitBtn.disabled = true;
+            if (btnText) btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Sending...';
+
+            try {
+                const recipientIds = currentPushRecipients.map(u => u.id);
+                const isAll = shiftId === 'ALL_UNCONFIRMED';
+                const targetShift = !isAll ? allShifts.find(s => s.id === shiftId) : null;
+                const venueName = isAll ? 'All Unconfirmed Shifts' : (targetShift ? (targetShift.venueName || 'Shift') : 'Shift Reminder');
+
+                // 1. Create document in pushNotifications collection (triggers Cloud Function for FCM delivery)
+                await addDoc(collection(db, "pushNotifications"), {
+                    type: "shift_reminder",
+                    shiftId: shiftId,
+                    venueName: venueName,
+                    recipientUserIds: recipientIds,
+                    recipientCount: recipientIds.length,
+                    title: title,
+                    body: body,
+                    status: "pending",
+                    sentByEmail: auth.currentUser ? auth.currentUser.email : "admin",
+                    sentByName: auth.currentUser ? (auth.currentUser.displayName || auth.currentUser.email) : "Admin",
+                    createdAt: serverTimestamp()
+                });
+
+                // 2. Also log in-app notification for each recipient user
+                for (const userId of recipientIds) {
+                    try {
+                        await addDoc(collection(db, "users", userId, "notifications"), {
+                            title: title,
+                            body: body,
+                            type: "shift_confirmation",
+                            shiftId: shiftId,
+                            venueName: venueName,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                    } catch (subErr) {
+                        console.warn("Could not write in-app notification for user:", userId, subErr);
+                    }
+                }
+
+                const modalEl = document.getElementById('sendPushNotificationModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+
+                showNotificationToast(`Push notification sent successfully to ${recipientIds.length} user(s)!`);
+            } catch (error) {
+                console.error("Error sending push notification:", error);
+                showNotificationToast(`Failed to send push notification: ${error.message}`, false);
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+                if (btnText) btnText.textContent = 'Send Push Notification';
             }
         });
     }
