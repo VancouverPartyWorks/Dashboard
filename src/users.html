@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" href="./assets/images/favicon.png">
   <link rel="stylesheet" href="./assets/scss/style.scss">
 
+  <script src="./assets/js/pre-auth.js"></script>
 </head>
 
 <body>
@@ -92,13 +93,13 @@
       </li>
       <li><a class="nav-link active" href="users.html"><i class="ti ti-users"></i><span
             class="nav-text">Users</span></a></li>
-      <li><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
+      <li id="shiftsNavItem"><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
             class="nav-text">Shifts</span></a></li>
-      <li class="" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i class="ti ti-video"></i><span
+      <li class="d-none" id="timesheetNavItem"><a class="nav-link" href="timesheet.html"><i class="ti ti-clock"></i><span
+            class="nav-text">Timesheet</span></a></li>
+      <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i class="ti ti-video"></i><span
             class="nav-text">Resources</span></a></li>
-
-
-
+      <li class="d-none" id="receiptsNavItem"><a class="nav-link" href="receipts.html"><i class="ti ti-receipt"></i><span class="nav-text">Receipts</span></a></li>
     </ul>
 
   </aside>
@@ -110,7 +111,7 @@
         <div class="col-12">
           <div class="mb-6">
             <h1 class="fs-3 mb-1">Users</h1>
-            <p>Manage Vancouver Partyworks Users</p>
+            <p id="pageSubtitle">Manage Vancouver Partyworks Users</p>
           </div>
         </div>
       </div>
@@ -118,7 +119,7 @@
         <div class="col-12">
           <div class="card">
             <div class="card-header bg-white d-flex justify-content-between align-items-center px-4 py-3">
-              <h4 class="mb-0 h5">Users Management</h4>
+              <h4 class="mb-0 h5" id="tableTitle">Users Management</h4>
               <div class="d-flex gap-2">
                 <input type="text" id="searchUserInput" class="form-control form-control-sm" placeholder="Search users..." style="max-width: 200px;">
                 <button class="btn btn-primary btn-sm text-nowrap d-none" id="addUserBtn" data-bs-toggle="modal" data-bs-target="#addUserModal">
@@ -135,7 +136,7 @@
                       <th scope="col">Contact Info</th>
                       <th scope="col">Role</th>
                       <th scope="col">Status</th>
-                      <th scope="col" class="text-end">Action</th>
+                      <th scope="col" class="text-end" id="actionColumnHeader">Action</th>
                     </tr>
                   </thead>
                   <tbody id="usersTableBody">
@@ -174,6 +175,15 @@
                   <label for="userEmail" class="form-label">Email</label>
                   <input type="email" class="form-control" id="userEmail">
                 </div>
+                <div class="mb-3" id="passwordFieldContainer" style="display: none;">
+                  <label for="userPassword" class="form-label">Password</label>
+                  <div class="input-group">
+                    <input type="password" class="form-control" id="userPassword" minlength="6" placeholder="Enter password (min. 6 characters)" data-toggle-password="userPassword">
+                    <button class="btn btn-outline-secondary" type="button" id="toggleUserPassword" data-toggle-password="userPassword" aria-label="Show password">
+                      <i class="ti ti-eye" id="toggleUserPasswordIcon"></i>
+                    </button>
+                  </div>
+                </div>
                 <div class="mb-3" id="phoneFieldContainer" style="display: none;">
                   <label for="userPhone" class="form-label">Phone Number</label>
                   <input type="tel" class="form-control" id="userPhone">
@@ -210,10 +220,6 @@
                 <div class="mb-3">
                   <label for="editUserRole" class="form-label">Role</label>
                   <select class="form-select" id="editUserRole" required>
-                    <option value="admin">admin</option>
-                    <option value="lead">lead</option>
-                    <option value="staff">staff</option>
-                    <option value="driver">driver</option>
                   </select>
                 </div>
                 <div class="mb-3">
@@ -254,7 +260,7 @@
 
       <div class="row">
         <div class="col-12">
-          <footer class="text-center py-2 mt-6 text-secondary ">
+          <footer class="text-center py-2 text-secondary ">
             <p class="mb-0">Copyright © 2026 Vancouver Partyworks</p>
           </footer>
         </div>

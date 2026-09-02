@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     let currentFolder = 'Manuals'; // Default
+    const userRoleId = localStorage.getItem('userRoleId');
+    const isSpectator = userRoleId === '6' || userRoleId === 6;
 
     // Set active folder on card click
     categoryCards.forEach(card => {
@@ -63,18 +65,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (folder === 'Training Videos') {
             uploadFileBtn.classList.add('d-none');
-            addVideoBtn.classList.remove('d-none');
+            if (isSpectator) {
+                addVideoBtn.classList.add('d-none');
+            } else {
+                addVideoBtn.classList.remove('d-none');
+            }
             tableHead.innerHTML = `
                 <tr>
                     <th scope="col">Title</th>
                     <th scope="col">Description</th>
                     <th scope="col">Video Link</th>
-                    <th scope="col" class="text-end">Action</th>
+                    ${isSpectator ? '' : '<th scope="col" class="text-end">Action</th>'}
                 </tr>
             `;
             await loadVideos();
         } else {
-            uploadFileBtn.classList.remove('d-none');
+            if (isSpectator) {
+                uploadFileBtn.classList.add('d-none');
+            } else {
+                uploadFileBtn.classList.remove('d-none');
+            }
             addVideoBtn.classList.add('d-none');
             tableHead.innerHTML = `
                 <tr>
@@ -106,10 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             querySnapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${data.title || 'N/A'}</td>
-                    <td>${data.description || 'N/A'}</td>
-                    <td><a href="${data.videoUrl || '#'}" target="_blank" class="text-primary">Watch</a></td>
+                const actionCell = isSpectator ? '' : `
                     <td class="text-end">
                         <button class="btn btn-sm btn-outline-secondary edit-video-btn me-1" 
                                 data-id="${docSnap.id}" 
@@ -120,6 +127,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         </button>
                         <button class="btn btn-sm btn-outline-danger delete-btn" data-type="video" data-path="${docSnap.id}" data-name="${data.title || 'Video'}"><i class="ti ti-trash"></i></button>
                     </td>
+                `;
+                tr.innerHTML = `
+                    <td>${data.title || 'N/A'}</td>
+                    <td>${data.description || 'N/A'}</td>
+                    <td><a href="${data.videoUrl || '#'}" target="_blank" class="text-primary">Watch</a></td>
+                    ${actionCell}
                 `;
                 resourcesTableBody.appendChild(tr);
             });
@@ -150,13 +163,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             for (const itemRef of res.items) {
                 const tr = document.createElement('tr');
+                const actionContent = isSpectator ? `
+                    <a href="#" class="btn btn-sm btn-outline-primary view-btn" target="_blank" data-path="${itemRef.fullPath}">View</a>
+                ` : `
+                    <a href="#" class="btn btn-sm btn-outline-primary view-btn me-1" target="_blank" data-path="${itemRef.fullPath}">View</a>
+                    <button class="btn btn-sm btn-outline-danger delete-btn" data-type="file" data-path="${itemRef.fullPath}" data-name="${itemRef.name}"><i class="ti ti-trash"></i></button>
+                `;
                 tr.innerHTML = `
                     <td>${itemRef.name}</td>
                     <td class="type-cell">Loading...</td>
                     <td class="size-cell">Loading...</td>
                     <td class="text-end">
-                        <a href="#" class="btn btn-sm btn-outline-primary view-btn me-1" target="_blank" data-path="${itemRef.fullPath}">View</a>
-                        <button class="btn btn-sm btn-outline-danger delete-btn" data-type="file" data-path="${itemRef.fullPath}" data-name="${itemRef.name}"><i class="ti ti-trash"></i></button>
+                        ${actionContent}
                     </td>
                 `;
                 resourcesTableBody.appendChild(tr);

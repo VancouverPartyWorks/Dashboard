@@ -36,4 +36,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
         console.error("Error fetching total resources:", e);
     }
+
+    try {
+        // Fetch Total Receipts
+        const totalReceiptsStat = document.getElementById('totalReceiptsStat');
+        if (totalReceiptsStat) {
+            const { getStorage, ref, listAll } = await import('firebase/storage');
+            const storage = getStorage();
+            const receiptsRef = ref(storage, 'Users');
+            const res = await listAll(receiptsRef);
+            let count = 0;
+            for (const folderRef of res.prefixes) {
+                const folderRes = await listAll(folderRef);
+                for (const itemRef of folderRes.items) {
+                    if (itemRef.name !== 'user_avatar.jpg') {
+                        count++;
+                    }
+                }
+            }
+            totalReceiptsStat.textContent = count;
+        }
+    } catch (e) {
+        console.error("Error fetching total receipts:", e);
+    }
 });

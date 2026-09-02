@@ -96,8 +96,11 @@ function confirmLogoutWithModal() {
   });
 }
 
-function applyRolePermissions(roleId) {
-  const isRestricted = roleId === 2 || roleId === 3;
+function applyRolePermissions(userData) {
+  const roleId = userData.roleId;
+  localStorage.setItem('userRoleId', roleId);
+  const isSpectator = roleId === 6 || (userData.role && userData.role.toLowerCase() === 'spectator');
+  const isRestricted = (roleId === 2 || roleId === 3) && !isSpectator;
   
   if (isRestricted) {
     // Hide sidebar links
@@ -116,11 +119,108 @@ function applyRolePermissions(roleId) {
       dashboardCardCol.style.display = 'none';
       dashboardCardCol.classList.add('d-none');
     }
+  } else {
+    // Show sidebar links
+    const sidebarLinks = document.querySelectorAll('a[href="resources.html"]');
+    sidebarLinks.forEach(link => {
+      const li = link.closest('li');
+      if (li) {
+        li.style.display = '';
+        li.classList.remove('d-none');
+      }
+    });
+
+    // Show dashboard card if present
+    const dashboardCardCol = document.getElementById('resourcesCardCol');
+    if (dashboardCardCol) {
+      dashboardCardCol.style.display = '';
+      dashboardCardCol.classList.remove('d-none');
+    }
+  }
+
+  // Shifts & Timesheet page visibility
+  const shiftsNavItem = document.getElementById('shiftsNavItem');
+  const shiftsCardCol = document.getElementById('shiftsCardCol');
+  const timesheetNavItem = document.getElementById('timesheetNavItem');
+  const timesheetCardCol = document.getElementById('timesheetCardCol');
+  const receiptsNavItem = document.getElementById('receiptsNavItem');
+  const receiptsCardCol = document.getElementById('receiptsCardCol');
+  
+  const isAccountant = (userData.role && (userData.role.toLowerCase() === 'accountant' || userData.role.toLowerCase() === 'accounts')) || roleId === 3;
+  const isSuperAdmin = roleId === 1;
+
+  if (shiftsNavItem) {
+    if (isAccountant) {
+      shiftsNavItem.classList.add('d-none');
+      shiftsNavItem.style.display = 'none';
+    } else {
+      shiftsNavItem.classList.remove('d-none');
+      shiftsNavItem.style.display = '';
+    }
+  }
+
+  if (shiftsCardCol) {
+    if (isAccountant) {
+      shiftsCardCol.classList.add('d-none');
+      shiftsCardCol.style.display = 'none';
+    } else {
+      shiftsCardCol.classList.remove('d-none');
+      shiftsCardCol.style.display = '';
+    }
+  }
+
+  if (timesheetNavItem) {
+    if (isAccountant || isSuperAdmin) {
+      timesheetNavItem.classList.remove('d-none');
+      timesheetNavItem.style.display = '';
+    } else {
+      timesheetNavItem.classList.add('d-none');
+      timesheetNavItem.style.display = 'none';
+    }
+  }
+
+  if (timesheetCardCol) {
+    if (isAccountant || isSuperAdmin) {
+      timesheetCardCol.classList.remove('d-none');
+      timesheetCardCol.style.display = '';
+    } else {
+      timesheetCardCol.classList.add('d-none');
+      timesheetCardCol.style.display = 'none';
+    }
+  }
+  
+  if (receiptsNavItem) {
+    if (isAccountant || isSuperAdmin) {
+      receiptsNavItem.classList.remove('d-none');
+      receiptsNavItem.style.display = '';
+    } else {
+      receiptsNavItem.classList.add('d-none');
+      receiptsNavItem.style.display = 'none';
+    }
+  }
+
+  if (receiptsCardCol) {
+    if (isAccountant || isSuperAdmin) {
+      receiptsCardCol.classList.remove('d-none');
+      receiptsCardCol.style.display = '';
+    } else {
+      receiptsCardCol.classList.add('d-none');
+      receiptsCardCol.style.display = 'none';
+    }
   }
 
   // Prevent direct access
   const currentPage = getCurrentPage();
   if (isRestricted && currentPage === 'resources.html') {
+    redirectTo('./index.html');
+  }
+  if (!isAccountant && !isSuperAdmin && currentPage === 'receipts.html') {
+    redirectTo('./index.html');
+  }
+  if (isAccountant && currentPage === 'shifts.html') {
+    redirectTo('./timesheet.html');
+  }
+  if (!isAccountant && !isSuperAdmin && currentPage === 'timesheet.html') {
     redirectTo('./index.html');
   }
 }
@@ -142,8 +242,11 @@ function updateUserProfileUI(userData) {
     roleText = 'Admin';
     avatarNum = 2;
   } else if (userData.roleId === 3) {
-    roleText = 'Manager';
+    roleText = 'Accountant';
     avatarNum = 3;
+  } else if (userData.roleId === 6 || (userData.role && userData.role.toLowerCase() === 'spectator')) {
+    roleText = 'Spectator';
+    avatarNum = 4;
   }
   
   if (roleEl) roleEl.textContent = roleText;
@@ -173,7 +276,7 @@ function applyAuthGuard() {
           return;
         }
         const userData = querySnapshot.docs[0].data();
-        applyRolePermissions(userData.roleId);
+        applyRolePermissions(userData);
         updateUserProfileUI(userData);
       } catch (error) {
         console.error("Error checking user access:", error);
@@ -332,6 +435,7 @@ function setupLogoutLinks() {
         const confirmed = await confirmLogoutWithModal();
         if (!confirmed) return;
 
+        localStorage.removeItem('userRoleId');
         await signOut(auth);
         redirectTo('./signin.html');
       };

@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" href="./assets/images/favicon.png">
   <link rel="stylesheet" href="./assets/scss/style.scss">
 
+  <script src="./assets/js/pre-auth.js"></script>
 </head>
 
 <body>
@@ -91,13 +92,13 @@
       <li><a class="nav-link" href="index.html"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a>
       </li>
       <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
-      <li><a class="nav-link active" href="shifts.html"><i class="ti ti-calendar-event"></i><span
+      <li id="shiftsNavItem"><a class="nav-link active" href="shifts.html"><i class="ti ti-calendar-event"></i><span
             class="nav-text">Shifts</span></a></li>
-      <li class="" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i class="ti ti-video"></i><span
+      <li class="d-none" id="timesheetNavItem"><a class="nav-link" href="timesheet.html"><i class="ti ti-clock"></i><span
+            class="nav-text">Timesheet</span></a></li>
+      <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i class="ti ti-video"></i><span
             class="nav-text">Resources</span></a></li>
-
-
-
+      <li class="d-none" id="receiptsNavItem"><a class="nav-link" href="receipts.html"><i class="ti ti-receipt"></i><span class="nav-text">Receipts</span></a></li>
     </ul>
 
   </aside>
@@ -109,7 +110,7 @@
         <div class="col-12">
           <div class="mb-6">
             <h1 class="fs-3 mb-1">Shifts</h1>
-            <p>Manage Vancouver Partyworks Shifts</p>
+            <p id="pageSubtitle">Manage Vancouver Partyworks Shifts</p>
           </div>
         </div>
       </div>
@@ -117,10 +118,13 @@
         <div class="col-12">
           <div class="card">
             <div class="card-header bg-white d-flex justify-content-between align-items-center px-4 py-3">
-              <h4 class="mb-0 h5">Shifts Management</h4>
-              <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addShiftModal">
-                <i class="ti ti-plus"></i> Create Shift
-              </button>
+              <h4 class="mb-0 h5" id="tableTitle">Shifts Management</h4>
+              <div class="d-flex gap-2">
+                <input type="text" id="searchShiftInput" class="form-control form-control-sm" placeholder="Search by venue name..." style="max-width: 200px;">
+                <button class="btn btn-primary btn-sm d-none text-nowrap" id="createShiftBtn" data-bs-toggle="modal" data-bs-target="#addShiftModal">
+                  <i class="ti ti-plus"></i> Create Shift
+                </button>
+              </div>
             </div>
             <div class="card-body p-0">
               <div class="table-responsive">
@@ -132,7 +136,7 @@
                       <th scope="col">Meeting Location</th>
                       <th scope="col">Role</th>
                       <th scope="col">Status</th>
-                      <th scope="col" class="text-end">Action</th>
+                      <th scope="col" class="text-end" id="actionColumnHeader">Action</th>
                     </tr>
                   </thead>
                   <tbody id="shiftsTableBody">
@@ -162,9 +166,9 @@
                   <input type="date" class="form-control" id="shiftDate" required>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Event</label>
-                  <div class="border rounded p-2" id="shiftEventContainer" style="max-height: 105px; overflow-y: auto;">
-                    <div class="text-muted small">Loading events...</div>
+                  <label class="form-label">Events & Types</label>
+                  <div class="border rounded p-2 bg-light-subtle" id="shiftEventContainer" style="max-height: 180px; overflow-y: auto;">
+                    <div class="text-muted small py-2 text-center">Please select a date to view events.</div>
                   </div>
                 </div>
                 <div class="mb-3">
@@ -172,21 +176,13 @@
                   <input type="text" class="form-control" id="shiftMeetingLocation" required value="Warehouse">
                 </div>
                 <div class="mb-3">
-                  <label for="shiftSelector" class="form-label">Selector</label>
-                  <select class="form-select" id="shiftSelector" required>
-                    <option value="Delivery">Delivery</option>
-                    <option value="Pickup">Pickup</option>
-                    <option value="Return Event">Return Event</option>
-                  </select>
-                </div>
-                <div class="mb-3">
                   <label for="shiftStartTime" class="form-label">Start Time</label>
                   <input type="time" class="form-control" id="shiftStartTime" required>
                 </div>
                 <div class="mb-3">
                   <label for="shiftLead" class="form-label">Select Lead</label>
-                  <select class="form-select" id="shiftLead" required>
-                    <option value="" disabled selected>Loading leads...</option>
+                  <select class="form-select" id="shiftLead">
+                    <option value="" selected>Loading leads...</option>
                   </select>
                 </div>
                 <div class="mb-3">
@@ -194,6 +190,16 @@
                   <div class="border rounded p-2" id="shiftStaffContainer" style="max-height: 150px; overflow-y: auto;">
                     <div class="text-muted small">Loading staff...</div>
                   </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Notes</label>
+                  <div class="input-group mb-2">
+                    <input type="text" class="form-control" id="shiftNoteInput" placeholder="Add a note (e.g., Dress code)...">
+                    <button class="btn btn-outline-secondary" type="button" id="addShiftNoteBtn">Add</button>
+                  </div>
+                  <ul class="list-group list-group-flush border rounded" id="shiftNotesList" style="max-height: 140px; overflow-y: auto;">
+                    <li class="list-group-item text-muted small py-2 text-center">No notes added</li>
+                  </ul>
                 </div>
               </div>
               <div class="modal-footer">
@@ -274,7 +280,7 @@
 
     <div class="row">
       <div class="col-12">
-        <footer class="text-center py-2 mt-6 text-secondary ">
+        <footer class="text-center py-2 text-secondary ">
           <p class="mb-0">Copyright © 2026 Vancouver Partyworks</p>
         </footer>
       </div>

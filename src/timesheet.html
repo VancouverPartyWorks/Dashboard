@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Timesheet - Vancouver Partyworks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="./assets/images/favicon.png">
+  <link rel="stylesheet" href="./assets/scss/style.scss">
+
+  <script src="./assets/js/pre-auth.js"></script>
+</head>
+
+<body>
+  <div id="overlay" class="overlay"></div>
+  <!-- TOPBAR -->
+  <nav id="topbar" class="navbar bg-white border-bottom fixed-top topbar px-3">
+    <button id="toggleBtn" class="d-none d-lg-inline-flex btn btn-light btn-icon btn-sm ">
+      <i class="ti ti-layout-sidebar-left-expand"></i>
+    </button>
+
+    <!-- MOBILE -->
+    <button id="mobileBtn" class="btn btn-light btn-icon btn-sm d-lg-none me-2">
+      <i class="ti ti-layout-sidebar-left-expand"></i>
+    </button>
+    <div>
+      <!-- Navbar nav -->
+      <ul class="list-unstyled d-flex align-items-center mb-0 gap-1">
+        <!-- Bell icon -->
+        <li>
+          <a class="position-relative btn-icon btn-sm btn-light btn rounded-circle" data-bs-toggle="dropdown"
+            aria-expanded="false" href="#" role="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-bell">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" />
+              <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
+            </svg>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-md p-0">
+            <ul class="list-unstyled p-0 m-0">
+              <li class="px-4 py-3 text-center text-muted">
+                No new notifications
+              </li>
+            </ul>
+          </div>
+        </li>
+        <!-- Dropdown -->
+        <li class="ms-3 dropdown">
+          <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt=""
+              class="avatar avatar-sm rounded-circle bg-light" id="userAvatarDropdown" />
+          </a>
+          <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 200px;">
+            <div>
+              <div class="d-flex gap-3 align-items-center border-dashed border-bottom px-3 py-3">
+                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt=""
+                  class="avatar avatar-md rounded-circle bg-light" id="userAvatarMenu" />
+                <div>
+                  <h4 class="mb-0 small" id="userProfileName">Loading...</h4>
+                  <span class="badge bg-light-subtle text-muted border small" id="userProfileRole">User</span>
+                </div>
+              </div>
+              <div class="p-3 d-flex flex-column gap-1 small lh-lg">
+                <a href="#!" class="">
+                  <span> Account Settings</span>
+                </a>
+                <a href="signin.html" class="">
+                  <span> Log out</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="sidebar">
+    <div class="logo-area">
+      <a href="index.html" class="d-inline-flex">
+        <img src="./assets/images/pw_header.png" alt="Vancouver Partyworks"
+          style="max-height: 80px; width: auto; max-width: 100%;">
+      </a>
+    </div>
+    <ul class="nav flex-column">
+      <li><a class="nav-link" href="index.html"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a>
+      </li>
+      <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
+      <li id="shiftsNavItem"><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
+            class="nav-text">Shifts</span></a></li>
+      <li id="timesheetNavItem"><a class="nav-link active" href="timesheet.html"><i class="ti ti-clock"></i><span
+            class="nav-text">Timesheet</span></a></li>
+      <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i
+            class="ti ti-video"></i><span class="nav-text">Resources</span></a></li>
+      <li class="d-none" id="receiptsNavItem"><a class="nav-link" href="receipts.html"><i
+            class="ti ti-receipt"></i><span class="nav-text">Receipts</span></a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main id="content" class="content py-10">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-12">
+          <div class="mb-6 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+              <h1 class="fs-3 mb-1">Timesheet</h1>
+              <p class="text-muted mb-0">Manage employee time logs, flag resolution, and payroll exports</p>
+            </div>
+            <div>
+              <button id="exportExcelBtn" class="btn btn-success text-white d-inline-flex align-items-center gap-2">
+                <i class="ti ti-file-spreadsheet fs-4"></i>
+                <span>Export to Excel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTER & CONTROL CARD -->
+      <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body p-4">
+          <div class="row g-3">
+            <!-- Filter: Date Range -->
+            <div class="col-md-4 col-sm-6">
+              <label for="filterStartDate" class="form-label small fw-semibold text-muted mb-1">Start Date</label>
+              <input type="date" id="filterStartDate" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4 col-sm-6">
+              <label for="filterEndDate" class="form-label small fw-semibold text-muted mb-1">End Date</label>
+              <input type="date" id="filterEndDate" class="form-control form-control-sm">
+            </div>
+
+            <!-- Filter: Employee Name -->
+            <div class="col-md-4 col-sm-6">
+              <label for="filterEmployee" class="form-label small fw-semibold text-muted mb-1">Employee Name</label>
+              <select id="filterEmployee" class="form-select form-select-sm">
+                <option value="">All Employees</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+            <div class="text-muted small">
+              <span id="activeFiltersSummary">Showing all records</span>
+            </div>
+            <button id="resetFiltersBtn" class="btn btn-sm btn-light border text-secondary">
+              <i class="ti ti-refresh me-1"></i> Reset Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIMESHEET TABLE CARD -->
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0 fs-6 fw-bold">Employee Time Logs</h5>
+          <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2" id="recordCountBadge">0
+            records</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle table-hover mb-0" id="timesheetTable">
+            <thead class="table-light">
+              <tr>
+                <th scope="col" class="sortable-header" data-sort="name">
+                  Employee Name <i class="ti ti-selector text-muted small ms-1"></i>
+                </th>
+                <th scope="col" class="sortable-header" data-sort="date">
+                  Date <i class="ti ti-selector text-muted small ms-1"></i>
+                </th>
+                <th scope="col">Event Name</th>
+                <th scope="col">Clock In</th>
+                <th scope="col">Clock Out</th>
+                <th scope="col">Total Hours</th>
+                <th scope="col">Flags</th>
+                <th scope="col" class="text-end pe-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="timesheetTableBody">
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">
+                  <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                  Loading timesheet data...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PAGINATION BAR (20 records / page) -->
+        <div
+          class="card-footer bg-white py-3 border-top d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+          <div class="text-muted small">
+            Showing <span class="fw-bold" id="pageStart">0</span> to <span class="fw-bold" id="pageEnd">0</span> of
+            <span class="fw-bold" id="totalRecordsCount">0</span> records
+          </div>
+          <nav aria-label="Timesheet pagination">
+            <ul class="pagination pagination-sm mb-0" id="paginationControls">
+              <!-- Dynamically rendered -->
+            </ul>
+          </nav>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- EDIT TIME LOG MODAL -->
+  <div class="modal fade" id="editTimeLogModal" tabindex="-1" aria-labelledby="editTimeLogModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editTimeLogModalLabel">Edit Clock Times</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="editTimeLogForm">
+          <input type="hidden" id="editLogId">
+          <div class="modal-body">
+            <div class="row g-2 mb-3">
+              <div class="col-7">
+                <label class="form-label text-muted small mb-1">Employee</label>
+                <input type="text" id="editEmpName" class="form-control bg-light" readonly>
+              </div>
+              <div class="col-5">
+                <label class="form-label text-muted small mb-1">Role</label>
+                <input type="text" id="editEmpRole" class="form-control bg-light" readonly>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-muted small mb-1">Event Name</label>
+              <input type="text" id="editEventName" class="form-control" required>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label for="editClockIn" class="form-label text-muted small mb-1">Clock In</label>
+                <input type="datetime-local" id="editClockIn" class="form-control form-control-sm" required>
+              </div>
+              <div class="col-6">
+                <label for="editClockOut" class="form-label text-muted small mb-1">Clock Out</label>
+                <input type="datetime-local" id="editClockOut" class="form-control form-control-sm" required>
+              </div>
+            </div>
+            <div class="p-3 bg-light rounded mb-3 border">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="small fw-semibold text-secondary">Calculated Total Hours:</span>
+                <span class="fw-bold fs-5 text-primary" id="calculatedHours">0.00 hrs</span>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="editNote" class="form-label text-muted small mb-1">Adjustment Note / Reason</label>
+              <input type="text" id="editNote" class="form-control form-control-sm"
+                placeholder="e.g. Corrected manual clock-out time">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="saveEditLogBtn">
+              <i class="ti ti-check me-1"></i> Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./assets/js/main.js" type="module"></script>
+  <script src="./assets/js/timesheet.js" type="module"></script>
+</body>
+
+</html>

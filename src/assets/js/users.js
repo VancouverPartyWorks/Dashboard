@@ -1,6 +1,6 @@
 import * as bootstrap from 'bootstrap';
 import { db, auth, firebaseConfig } from './firebase-client.js';
-import { collection, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, setDoc, serverTimestamp, updateDoc, doc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
 import { onAuthStateChanged, getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 
@@ -10,14 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const addUserBtn = document.getElementById('addUserBtn');
     
     const userRoleSelect = document.getElementById('userRole');
+    const editUserRoleSelect = document.getElementById('editUserRole');
     const emailFieldContainer = document.getElementById('emailFieldContainer');
+    const passwordFieldContainer = document.getElementById('passwordFieldContainer');
     const phoneFieldContainer = document.getElementById('phoneFieldContainer');
     const userEmailInput = document.getElementById('userEmail');
+    const userPasswordInput = document.getElementById('userPassword');
     const userPhoneInput = document.getElementById('userPhone');
+    const toggleUserPasswordBtn = document.getElementById('toggleUserPassword');
 
     let availableRoles = [];
     let currentUserRoleId = null;
     let currentUserRoleName = '';
+    let isSuperAdmin = false;
+    let isSuperAdminLocal = false;
+    let isHr = false;
 
     let fetchRolesPromise = null;
     function fetchRoles() {
@@ -36,43 +43,84 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateRolesDropdown() {
-        if (!userRoleSelect) return;
-        userRoleSelect.innerHTML = '<option value="" disabled selected>Select a role...</option>';
-        
         let rolesToShow = availableRoles;
-        if (currentUserRoleName.toLowerCase() !== 'super admin') {
+        if (currentUserRoleName && currentUserRoleName.toLowerCase() !== 'super admin') {
             rolesToShow = availableRoles.filter(r => 
                 r.name.toLowerCase().includes('staff') || 
                 r.name.toLowerCase().includes('lead')
             );
         }
         
-        rolesToShow.forEach(role => {
-            const option = document.createElement('option');
-            option.value = role.id; 
-            option.dataset.name = role.name;
-            option.textContent = role.name;
-            userRoleSelect.appendChild(option);
+        if (userRoleSelect) {
+            userRoleSelect.innerHTML = '<option value="" disabled selected>Select a role...</option>';
+            rolesToShow.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role.id; 
+                option.dataset.name = role.name;
+                option.textContent = role.name;
+                userRoleSelect.appendChild(option);
+            });
+        }
+
+        if (editUserRoleSelect) {
+            editUserRoleSelect.innerHTML = '<option value="" disabled selected>Select a role...</option>';
+            rolesToShow.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role.id;
+                option.dataset.name = role.name;
+                option.textContent = role.name;
+                editUserRoleSelect.appendChild(option);
+            });
+        }
+    }
+
+    if (toggleUserPasswordBtn && userPasswordInput) {
+        toggleUserPasswordBtn.addEventListener('click', () => {
+            const isPassword = userPasswordInput.type === 'password';
+            userPasswordInput.type = isPassword ? 'text' : 'password';
+            const icon = toggleUserPasswordBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('ti-eye', 'ti-eye-off');
+                icon.classList.add(isPassword ? 'ti-eye-off' : 'ti-eye');
+            }
         });
     }
 
     if (userRoleSelect) {
         userRoleSelect.addEventListener('change', (e) => {
             const selectedRoleId = parseInt(e.target.value, 10);
-            if (selectedRoleId === 1 || selectedRoleId === 2 || selectedRoleId === 3) {
-                emailFieldContainer.style.display = 'block';
-                userEmailInput.required = true;
-                userEmailInput.disabled = false;
-                phoneFieldContainer.style.display = 'none';
-                userPhoneInput.required = false;
-                userPhoneInput.disabled = true;
+            if (selectedRoleId === 1 || selectedRoleId === 2 || selectedRoleId === 3 || selectedRoleId === 6) {
+                if (emailFieldContainer) emailFieldContainer.style.display = 'block';
+                if (userEmailInput) {
+                    userEmailInput.required = true;
+                    userEmailInput.disabled = false;
+                }
+                if (passwordFieldContainer) passwordFieldContainer.style.display = 'block';
+                if (userPasswordInput) {
+                    userPasswordInput.required = true;
+                    userPasswordInput.disabled = false;
+                }
+                if (phoneFieldContainer) phoneFieldContainer.style.display = 'none';
+                if (userPhoneInput) {
+                    userPhoneInput.required = false;
+                    userPhoneInput.disabled = true;
+                }
             } else {
-                emailFieldContainer.style.display = 'none';
-                userEmailInput.required = false;
-                userEmailInput.disabled = true;
-                phoneFieldContainer.style.display = 'block';
-                userPhoneInput.required = true;
-                userPhoneInput.disabled = false;
+                if (emailFieldContainer) emailFieldContainer.style.display = 'none';
+                if (userEmailInput) {
+                    userEmailInput.required = false;
+                    userEmailInput.disabled = true;
+                }
+                if (passwordFieldContainer) passwordFieldContainer.style.display = 'none';
+                if (userPasswordInput) {
+                    userPasswordInput.required = false;
+                    userPasswordInput.disabled = true;
+                }
+                if (phoneFieldContainer) phoneFieldContainer.style.display = 'block';
+                if (userPhoneInput) {
+                    userPhoneInput.required = true;
+                    userPhoneInput.disabled = false;
+                }
             }
         });
     }
@@ -90,14 +138,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     const currentRole = availableRoles.find(r => r.id === currentUserRoleId);
                     currentUserRoleName = currentRole ? currentRole.name : '';
 
-                    const isSuperAdmin = currentUserRoleName.toLowerCase() === 'super admin';
-                    const isHr = currentUserRoleName.toLowerCase() === 'hr';
+                    isSuperAdminLocal = currentUserRoleName.toLowerCase() === 'super admin' || currentUserRoleId === 1;
+                    isHr = currentUserRoleName.toLowerCase() === 'hr' || currentUserRoleId === 2;
+                    isSuperAdmin = isSuperAdminLocal || isHr;
+                    
+                    const pageSubtitle = document.getElementById('pageSubtitle');
+                    const tableTitle = document.getElementById('tableTitle');
+                    if (pageSubtitle) {
+                        pageSubtitle.textContent = isSuperAdmin ? 'Manage Vancouver Partyworks Users' : 'Vancouver Partyworks Users Directory';
+                    }
+                    if (tableTitle) {
+                        tableTitle.textContent = isSuperAdmin ? 'Users Management' : 'Users Directory';
+                    }
                     
                     if (isSuperAdmin || isHr) {
                         if (addUserBtn) addUserBtn.classList.remove('d-none');
                     }
                     
                     populateRolesDropdown();
+                    renderUsersTable();
                 }
             } catch (error) {
                 console.error("Error checking user permissions:", error);
@@ -134,15 +193,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         usersTableBody.innerHTML = '';
+
+        const actionHeader = document.getElementById('actionColumnHeader');
+        if (actionHeader) {
+            actionHeader.style.display = isSuperAdmin ? '' : 'none';
+        }
+
         if (combined.length === 0) {
-            usersTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No users found.</td></tr>`;
+            usersTableBody.innerHTML = `<tr><td colspan="${isSuperAdmin ? 5 : 4}" class="text-center py-4 text-muted">No users found.</td></tr>`;
             return;
         }
 
         combined.forEach(user => {
             const contactInfo = user.email || user.phoneNumber || 'N/A';
             const roleIdForStatus = user.roleId;
-            const activeStatusDisplay = (roleIdForStatus === 1 || roleIdForStatus === 2 || roleIdForStatus === 3) ? 'N/A' : (user.activeStatus || 'onDuty');
+            const activeStatusDisplay = (roleIdForStatus === 1 || roleIdForStatus === 2 || roleIdForStatus === 3 || roleIdForStatus === 6) ? 'N/A' : (user.activeStatus || 'onDuty');
+
+            const currentRoleObj = availableRoles.find(r => r.id === user.roleId || r.name === user.role);
+            const targetRoleId = typeof user.roleId === 'number' ? user.roleId : (currentRoleObj ? currentRoleObj.id : null);
+            
+            const isRestrictedTargetRole = (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3);
+            const canEditOrDeleteUser = isSuperAdminLocal || (isHr && !isRestrictedTargetRole);
+
+            let actionCell = '';
+            if (isSuperAdmin) {
+                if (canEditOrDeleteUser) {
+                    actionCell = `
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-secondary edit-user-btn"
+                                data-id="${user.id}"
+                                data-source="${user.source}"
+                                data-name="${user.displayName || ''}"
+                                data-phone="${user.phoneNumber || ''}"
+                                data-role="${user.displayRole}"
+                                data-role-id="${targetRoleId || ''}"
+                                data-status="${activeStatusDisplay}">
+                                <i class="ti ti-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-user-btn ms-1"
+                                data-id="${user.id}"
+                                data-source="${user.source}"
+                                data-role-id="${targetRoleId || ''}">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                        </td>`;
+                } else {
+                    actionCell = `<td class="text-end"><span class="text-muted small">Restricted</span></td>`;
+                }
+            }
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -150,22 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${contactInfo}</td>
                 <td>${user.displayRole}</td>
                 <td>${activeStatusDisplay}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-secondary edit-user-btn"
-                        data-id="${user.id}"
-                        data-source="${user.source}"
-                        data-name="${user.displayName || ''}"
-                        data-phone="${user.phoneNumber || ''}"
-                        data-role="${user.displayRole}"
-                        data-status="${activeStatusDisplay}">
-                        <i class="ti ti-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger delete-user-btn ms-1"
-                        data-id="${user.id}"
-                        data-source="${user.source}">
-                        <i class="ti ti-trash"></i>
-                    </button>
-                </td>
+                ${actionCell}
             `;
             usersTableBody.appendChild(tr);
         });
@@ -211,9 +294,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addUserForm) {
         addUserForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const displayName = document.getElementById('userName').value;
-            const phoneNumber = document.getElementById('userPhone').value;
-            const email = document.getElementById('userEmail').value;
+            const displayName = document.getElementById('userName').value.trim();
+            const phoneNumber = document.getElementById('userPhone') ? document.getElementById('userPhone').value.trim() : '';
+            const email = document.getElementById('userEmail') ? document.getElementById('userEmail').value.trim() : '';
+            const password = document.getElementById('userPassword') ? document.getElementById('userPassword').value : '';
             const roleSelect = document.getElementById('userRole');
             const roleId = parseInt(roleSelect.value, 10);
 
@@ -222,35 +306,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const submitBtn = addUserForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Save User';
+
             try {
-                let newUserData = {
-                    displayName,
-                    roleId: roleId,
-                    activeStatus: 'onDuty',
-                    createdAt: serverTimestamp()
-                };
-                
-                if (roleId === 1 || roleId === 2 || roleId === 3) {
-                    newUserData.email = email;
-                    
-                    const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp" + Date.now());
-                    const secondaryAuth = getAuth(secondaryApp);
-                    await createUserWithEmailAndPassword(secondaryAuth, email, "PartyWorks2026!");
-                    await secondaryAuth.signOut();
-                } else {
-                    newUserData.phoneNumber = phoneNumber;
-                    console.info("Note: Phone number authentication users require OTP verification or Admin SDK to be created in Firebase Auth. Adding to Firestore only.");
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
                 }
 
-                await addDoc(collection(db, "users"), newUserData);
+                if (roleId === 1 || roleId === 2 || roleId === 3 || roleId === 6) {
+                    if (!password || password.length < 6) {
+                        alert("Password must be at least 6 characters long.");
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalBtnText;
+                        }
+                        return;
+                    }
+
+                    // 1. Create user in Firebase Authentication with secondary app instance
+                    const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp_" + Date.now());
+                    const secondaryAuth = getAuth(secondaryApp);
+                    const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                    await secondaryAuth.signOut();
+
+                    const authUid = userCredential.user.uid;
+
+                    // 2. Save user in Firestore dashboardUsers collection with Auth UID as doc ID
+                    // Password is NOT saved to Firestore
+                    const newUserData = {
+                        displayName,
+                        email,
+                        roleId: roleId,
+                        createdAt: serverTimestamp()
+                    };
+
+                    await setDoc(doc(db, "dashboardUsers", authUid), newUserData);
+                } else {
+                    // Mobile / field staff (Lead, Staff)
+                    const newUserData = {
+                        displayName,
+                        phoneNumber,
+                        roleId: roleId,
+                        activeStatus: 'onDuty',
+                        createdAt: serverTimestamp()
+                    };
+
+                    await addDoc(collection(db, "users"), newUserData);
+                }
                 
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+                const modalEl = document.getElementById('addUserModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
                 
                 addUserForm.reset();
+                if (emailFieldContainer) emailFieldContainer.style.display = 'none';
+                if (passwordFieldContainer) passwordFieldContainer.style.display = 'none';
+                if (phoneFieldContainer) phoneFieldContainer.style.display = 'none';
             } catch (error) {
                 console.error("Error adding user: ", error);
-                alert("Failed to add user. " + (error.message || ''));
+                alert("Failed to add user: " + (error.message || ''));
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                }
+            }
+        });
+    }
+
+    const addUserModalEl = document.getElementById('addUserModal');
+    if (addUserModalEl) {
+        addUserModalEl.addEventListener('hidden.bs.modal', () => {
+            if (addUserForm) addUserForm.reset();
+            if (emailFieldContainer) emailFieldContainer.style.display = 'none';
+            if (passwordFieldContainer) passwordFieldContainer.style.display = 'none';
+            if (phoneFieldContainer) phoneFieldContainer.style.display = 'none';
+            if (userPasswordInput) userPasswordInput.type = 'password';
+            if (toggleUserPasswordBtn) {
+                const icon = toggleUserPasswordBtn.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('ti-eye-off');
+                    icon.classList.add('ti-eye');
+                }
             }
         });
     }
@@ -261,6 +400,11 @@ document.addEventListener('DOMContentLoaded', () => {
     usersTableBody.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-user-btn');
         if (deleteBtn) {
+            const targetRoleId = parseInt(deleteBtn.dataset.roleId, 10);
+            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3)) {
+                alert("HR is restricted from deleting users with Super Admin, HR, or Accountant roles.");
+                return;
+            }
             userToDeleteId = deleteBtn.dataset.id;
             userToDeleteSource = deleteBtn.dataset.source || 'users';
             const modal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
@@ -270,22 +414,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const btn = e.target.closest('.edit-user-btn');
         if (btn) {
+            const targetRoleId = parseInt(btn.dataset.roleId, 10);
+            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3)) {
+                alert("HR is restricted from editing users with Super Admin, HR, or Accountant roles.");
+                return;
+            }
             document.getElementById('editUserId').value = btn.dataset.id;
             document.getElementById('editUserId').dataset.source = btn.dataset.source;
             document.getElementById('editUserName').value = btn.dataset.name;
             document.getElementById('editUserPhone').value = btn.dataset.phone;
             
+            populateRolesDropdown();
+
             const roleSelect = document.getElementById('editUserRole');
-            if (!Array.from(roleSelect.options).some(opt => opt.value === btn.dataset.role)) {
-                 roleSelect.add(new Option(btn.dataset.role, btn.dataset.role));
+            const targetRoleName = btn.dataset.role;
+
+            let matchedOption = null;
+            if (!isNaN(targetRoleId)) {
+                matchedOption = Array.from(roleSelect.options).find(opt => parseInt(opt.value, 10) === targetRoleId);
             }
-            roleSelect.value = btn.dataset.role;
+            if (!matchedOption && targetRoleName) {
+                matchedOption = Array.from(roleSelect.options).find(opt => opt.textContent.trim().toLowerCase() === targetRoleName.trim().toLowerCase() || opt.value.trim().toLowerCase() === targetRoleName.trim().toLowerCase());
+            }
+
+            if (matchedOption) {
+                roleSelect.value = matchedOption.value;
+            } else if (targetRoleName || !isNaN(targetRoleId)) {
+                const optVal = !isNaN(targetRoleId) ? targetRoleId : targetRoleName;
+                const optText = targetRoleName || `Role ${targetRoleId}`;
+                roleSelect.add(new Option(optText, optVal));
+                roleSelect.value = optVal;
+            }
 
             const statusSelect = document.getElementById('editUserStatus');
-            if (!Array.from(statusSelect.options).some(opt => opt.value === btn.dataset.status)) {
-                 statusSelect.add(new Option(btn.dataset.status, btn.dataset.status));
+            const currentStatus = btn.dataset.status || 'onDuty';
+            const matchedStatusOpt = Array.from(statusSelect.options).find(opt => opt.value.toLowerCase() === currentStatus.toLowerCase() || opt.textContent.trim().toLowerCase() === currentStatus.trim().toLowerCase());
+            if (matchedStatusOpt) {
+                statusSelect.value = matchedStatusOpt.value;
+            } else {
+                if (!Array.from(statusSelect.options).some(opt => opt.value === currentStatus)) {
+                    statusSelect.add(new Option(currentStatus, currentStatus));
+                }
+                statusSelect.value = currentStatus;
             }
-            statusSelect.value = btn.dataset.status;
 
             const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
             modal.show();
@@ -300,25 +471,51 @@ document.addEventListener('DOMContentLoaded', () => {
             const source = document.getElementById('editUserId').dataset.source || 'users';
             const displayName = document.getElementById('editUserName').value;
             const phoneNumber = document.getElementById('editUserPhone').value;
-            const roleName = document.getElementById('editUserRole').value;
+            const editRoleSelect = document.getElementById('editUserRole');
+            const selectedVal = editRoleSelect.value;
+            const parsedRoleId = parseInt(selectedVal, 10);
             const activeStatus = document.getElementById('editUserStatus').value;
 
-            try {
-                const currentRoleObj = availableRoles.find(r => r.name === roleName);
-                const roleId = currentRoleObj ? currentRoleObj.id : null;
+            const targetUser = [...allUsers, ...allDashboardUsers].find(u => u.id === id);
+            const targetRoleObj = targetUser ? availableRoles.find(r => r.id === targetUser.roleId || r.name === targetUser.role) : null;
+            const targetRoleId = targetUser ? (typeof targetUser.roleId === 'number' ? targetUser.roleId : (targetRoleObj ? targetRoleObj.id : null)) : null;
 
+            let roleObj = null;
+            if (!isNaN(parsedRoleId)) {
+                roleObj = availableRoles.find(r => r.id === parsedRoleId);
+            }
+            if (!roleObj) {
+                roleObj = availableRoles.find(r => r.name.toLowerCase() === selectedVal.toLowerCase());
+            }
+
+            const roleId = roleObj ? roleObj.id : (!isNaN(parsedRoleId) ? parsedRoleId : null);
+            const roleName = roleObj ? roleObj.name : (editRoleSelect.options[editRoleSelect.selectedIndex]?.textContent || selectedVal);
+
+            if (isHr && !isSuperAdminLocal) {
+                if (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3) {
+                    alert("HR is restricted from editing users with Super Admin, HR, or Accountant roles.");
+                    return;
+                }
+                if (roleId === 1 || roleId === 2 || roleId === 3) {
+                    alert("HR is restricted from assigning Super Admin, HR, or Accountant roles.");
+                    return;
+                }
+            }
+
+            try {
                 const updateData = {
                     displayName,
                     activeStatus,
                     updatedAt: serverTimestamp()
                 };
-                if (roleId) {
+                if (roleId !== null && !isNaN(roleId)) {
                     updateData.roleId = roleId;
-                } else {
-                    updateData.role = roleName; // fallback if somehow not mapped to id
+                }
+                if (roleName) {
+                    updateData.role = roleName;
                 }
                 
-                if (phoneNumber) updateData.phoneNumber = phoneNumber;
+                if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
 
                 await updateDoc(doc(db, source, id), updateData);
                 
@@ -336,6 +533,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', async () => {
             if (!userToDeleteId) return;
+            const targetUser = [...allUsers, ...allDashboardUsers].find(u => u.id === userToDeleteId);
+            const targetRoleObj = targetUser ? availableRoles.find(r => r.id === targetUser.roleId || r.name === targetUser.role) : null;
+            const targetRoleId = targetUser ? (typeof targetUser.roleId === 'number' ? targetUser.roleId : (targetRoleObj ? targetRoleObj.id : null)) : null;
+
+            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3)) {
+                alert("HR is restricted from deleting users with Super Admin, HR, or Accountant roles.");
+                return;
+            }
+
             try {
                 await deleteDoc(doc(db, userToDeleteSource, userToDeleteId));
                 
@@ -352,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     fetchRoles().then(() => {
+        populateRolesDropdown();
         loadUsers();
     });
 });
