@@ -123,6 +123,117 @@ document.addEventListener('DOMContentLoaded', () => {
         renderEventOptions();
     }
 
+    function normalizeTime(t) {
+        if (!t) return '';
+        const parts = String(t).trim().split(':');
+        if (parts.length >= 2) {
+            return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+        }
+        return String(t).trim();
+    }
+
+    function formatTime12h(timeStr) {
+        if (!timeStr) return '';
+        const parts = String(timeStr).split(':');
+        let h = parseInt(parts[0], 10);
+        const m = parts[1] ? parts[1].padStart(2, '0') : '00';
+        if (isNaN(h)) return timeStr;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12;
+        return `${h}:${m} ${ampm}`;
+    }
+
+    function getShiftDateAndTime(shift) {
+        let dateStr = shift.dateString || '';
+        let timeStr = shift.startTimeString ? normalizeTime(shift.startTimeString) : '';
+
+        if ((!dateStr || !timeStr) && shift.dateTime) {
+            let d = null;
+            if (typeof shift.dateTime.toDate === 'function') {
+                d = shift.dateTime.toDate();
+            } else if (shift.dateTime.seconds) {
+                d = new Date(shift.dateTime.seconds * 1000);
+            } else if (typeof shift.dateTime === 'string' || typeof shift.dateTime === 'number') {
+                d = new Date(shift.dateTime);
+            }
+
+            if (d && !isNaN(d.getTime())) {
+                if (!dateStr) {
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    dateStr = `${yyyy}-${mm}-${dd}`;
+                }
+                if (!timeStr) {
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const min = String(d.getMinutes()).padStart(2, '0');
+                    timeStr = `${hh}:${min}`;
+                }
+            }
+        }
+
+        let events = [];
+        if (Array.isArray(shift.eventsList)) {
+            events = shift.eventsList;
+        } else if (typeof shift.venueName === 'string') {
+            events = shift.venueName.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        return { dateStr, timeStr, events };
+    }
+
+    function validateShiftStartTime() {
+        const timeInput = document.getElementById('shiftStartTime');
+        const errorEl = document.getElementById('shiftStartTimeError');
+        const dateInput = document.getElementById('shiftDate');
+        if (!timeInput) return true;
+
+        const selectedDate = dateInput ? dateInput.value : '';
+        const selectedTime = normalizeTime(timeInput.value);
+        const checkedEvents = Array.from(document.querySelectorAll('.event-checkbox:checked')).map(cb => cb.value);
+
+        // Reset error state first
+        timeInput.classList.remove('is-invalid');
+        timeInput.setCustomValidity('');
+        if (errorEl) {
+            errorEl.classList.add('d-none');
+            errorEl.innerHTML = '';
+        }
+
+        // Only validate if date, time, and at least one event are chosen
+        if (!selectedDate || !selectedTime || checkedEvents.length === 0) {
+            return true;
+        }
+
+        // Check if any checked event already has a shift on this date with the same start time
+        let conflictingEvent = null;
+        for (const shift of allShifts) {
+            const shiftInfo = getShiftDateAndTime(shift);
+            if (shiftInfo.dateStr === selectedDate && shiftInfo.timeStr === selectedTime) {
+                const match = checkedEvents.find(eventName => shiftInfo.events.includes(eventName));
+                if (match) {
+                    conflictingEvent = match;
+                    break;
+                }
+            }
+        }
+
+        if (conflictingEvent) {
+            const formattedTime = formatTime12h(selectedTime);
+            timeInput.classList.add('is-invalid');
+            const message = `A shift for "${conflictingEvent}" is already scheduled at ${formattedTime} on this date. Please choose a different start time.`;
+            timeInput.setCustomValidity(message);
+            if (errorEl) {
+                errorEl.innerHTML = `<i class="ti ti-alert-circle me-1"></i>A shift for <strong>${conflictingEvent}</strong> is already scheduled at <strong>${formattedTime}</strong> on this date. Please choose a different start time.`;
+                errorEl.classList.remove('d-none');
+            }
+            return false;
+        }
+
+        return true;
+    }
+
     function renderEventOptions() {
         const container = document.getElementById('shiftEventContainer');
         if (!container) return;
@@ -132,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!selectedDate) {
             container.innerHTML = '<div class="text-muted small">Please select a date to view events.</div>';
+            validateShiftStartTime();
             return;
         }
 
@@ -140,22 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Gather assigned events
-        const assignedEvents = new Set();
-        allShifts.forEach(shift => {
-            if (shift.eventsList && Array.isArray(shift.eventsList)) {
-                shift.eventsList.forEach(e => assignedEvents.add(e));
-            } else if (shift.venueName) {
-                // Fallback for older shifts
-                shift.venueName.split(',').map(s => s.trim()).forEach(e => assignedEvents.add(e));
-            }
-        });
-
-        // Filter leads matching the selected date, delivery type, and not already assigned
+        // Filter leads matching the selected date and delivery type (events remain visible even if already assigned)
         const validLeads = cachedIOLeads.filter(lead => {
-            const displayName = lead.eventname || lead.eventorganization || `Lead #${lead.id}`;
-            if (assignedEvents.has(displayName)) return false;
-
             // Delivery type filter: ignore Customer Pickup from Warehouse, only show Fully Staffed and PartyWorks Drop Off & Pickup
             const dt = (lead.deliverytype || '').toLowerCase().trim();
             if (dt.includes('customer pick') || dt.includes('customer pickup')) return false;
@@ -182,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (validLeads.length === 0) {
             container.innerHTML = '<div class="text-muted small py-2 text-center">No events found for the selected date.</div>';
+            validateShiftStartTime();
             return;
         }
 
@@ -190,6 +289,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = `event_${lead.id || Math.random().toString(36).substr(2, 9)}`;
             const displayName = lead.eventname || lead.eventorganization || `Lead #${lead.id}`;
             
+            // Check existing shifts on selectedDate for this event
+            const existingShifts = allShifts.filter(shift => {
+                const info = getShiftDateAndTime(shift);
+                return info.dateStr === selectedDate && info.events.includes(displayName);
+            });
+            const existingCount = existingShifts.length;
+            const existingBadge = existingCount > 0 
+                ? `<span class="badge bg-secondary-subtle text-secondary small ms-1" title="${existingCount} shift${existingCount > 1 ? 's' : ''} already created on this date">${existingCount} shift${existingCount > 1 ? 's' : ''}</span>`
+                : '';
+            
+            const existingTimes = existingCount > 0 
+                ? `<div class="text-muted small" style="font-size: 0.72rem;">Scheduled: ${existingShifts.map(s => formatTime12h(getShiftDateAndTime(s).timeStr)).filter(Boolean).join(', ')}</div>`
+                : '';
+
             const div = document.createElement('div');
             div.className = 'd-flex justify-content-between align-items-center p-2 mb-2 rounded border bg-white event-row';
             div.dataset.event = displayName;
@@ -197,8 +310,9 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="form-check me-2 flex-grow-1 text-truncate" style="max-width: 62%;">
                 <input class="form-check-input event-checkbox" type="checkbox" value="${displayName}" id="${id}">
                 <label class="form-check-label fw-medium text-dark text-truncate ms-1" for="${id}" title="${displayName}">
-                  ${displayName}
+                  ${displayName}${existingBadge}
                 </label>
+                ${existingTimes}
               </div>
               <div style="width: 165px; flex-shrink: 0;">
                 <select class="form-select form-select-sm event-type-select" disabled>
@@ -227,10 +341,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.querySelectorAll('.event-checkbox').forEach(cb => cb.setCustomValidity(''));
                     const shiftDateInput = document.getElementById('shiftDate');
                     if (shiftDateInput) shiftDateInput.setCustomValidity('');
+                    validateShiftStartTime();
                 });
             }
             container.appendChild(div);
         });
+        validateShiftStartTime();
     }
 
     const shiftDateInput = document.getElementById('shiftDate');
@@ -243,6 +359,12 @@ document.addEventListener('DOMContentLoaded', () => {
             shiftDateInput.setCustomValidity('');
             renderEventOptions();
         });
+    }
+
+    const shiftStartTimeInput = document.getElementById('shiftStartTime');
+    if (shiftStartTimeInput) {
+        shiftStartTimeInput.addEventListener('input', validateShiftStartTime);
+        shiftStartTimeInput.addEventListener('change', validateShiftStartTime);
     }
 
     const searchInput = document.getElementById('searchShiftInput');
@@ -341,11 +463,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${dateDisplay}</td>
                 <td>${loc}</td>
                 <td>${role}</td>
-                <td>${status}</td>
+                <td>${formatStatusDisplay(status)}</td>
                 ${actionCell}
             `;
             shiftsTableBody.appendChild(tr);
         });
+    }
+
+    function formatStatusDisplay(statusStr) {
+        if (!statusStr) return 'Un Confirmed';
+        const s = String(statusStr).trim().toLowerCase();
+        if (s === 'confirmed') return 'Confirmed';
+        if (s === 'unconfirmed') return 'Un Confirmed';
+        return statusStr.charAt(0).toUpperCase() + statusStr.slice(1);
     }
 
     function loadShifts() {
@@ -469,6 +599,17 @@ document.addEventListener('DOMContentLoaded', () => {
             createShiftNotes = [];
             renderCreateShiftNotes();
 
+            const shiftStartTimeInput = document.getElementById('shiftStartTime');
+            if (shiftStartTimeInput) {
+                shiftStartTimeInput.classList.remove('is-invalid');
+                shiftStartTimeInput.setCustomValidity('');
+            }
+            const timeErrorEl = document.getElementById('shiftStartTimeError');
+            if (timeErrorEl) {
+                timeErrorEl.classList.add('d-none');
+                timeErrorEl.innerHTML = '';
+            }
+
             const leadSelect = document.getElementById('shiftLead');
             const staffContainer = document.getElementById('shiftStaffContainer');
             
@@ -564,6 +705,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 leadSelect.setCustomValidity('');
             }
 
+            if (!validateShiftStartTime()) {
+                const timeInput = document.getElementById('shiftStartTime');
+                if (timeInput) {
+                    timeInput.reportValidity();
+                    timeInput.focus();
+                }
+                return;
+            }
+
             const startTime = document.getElementById('shiftStartTime').value;
             const staffCheckboxes = document.querySelectorAll('.staff-checkbox:checked');
             const staff = Array.from(staffCheckboxes).map(cb => cb.value);
@@ -607,6 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (modal) modal.hide();
                 
                 addShiftForm.reset();
+                validateShiftStartTime();
                 document.getElementById('shiftMeetingLocation').value = 'Warehouse';
                 createShiftNotes = [];
                 renderCreateShiftNotes();
@@ -639,46 +790,453 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const editBtn = e.target.closest('.edit-shift-btn');
         if (editBtn) {
-            document.getElementById('editShiftId').value = editBtn.dataset.id;
-            document.getElementById('editShiftVenueName').value = editBtn.dataset.venue;
-            document.getElementById('editShiftDateTime').value = editBtn.dataset.date;
-            document.getElementById('editShiftMeetingLocation').value = editBtn.dataset.location;
-            document.getElementById('editShiftRole').value = editBtn.dataset.role;
-            document.getElementById('editShiftAssignedUserId').value = editBtn.dataset.assigned;
-            
-            const statusSelect = document.getElementById('editShiftStatus');
-            if (!Array.from(statusSelect.options).some(opt => opt.value === editBtn.dataset.status)) {
-                 statusSelect.add(new Option(editBtn.dataset.status, editBtn.dataset.status));
-            }
-            statusSelect.value = editBtn.dataset.status;
+            const shiftId = editBtn.dataset.id;
+            const shift = allShifts.find(s => s.id === shiftId) || {};
 
+            document.getElementById('editShiftId').value = shiftId;
+
+            // 1. Date & Start Time
+            const shiftInfo = getShiftDateAndTime(shift);
+            const dateInput = document.getElementById('editShiftDate');
+            if (dateInput) dateInput.value = shiftInfo.dateStr || '';
+
+            const timeInput = document.getElementById('editShiftStartTime');
+            if (timeInput) timeInput.value = shiftInfo.timeStr || '';
+
+            // 2. Event Name (disabled)
+            const eventNameInput = document.getElementById('editShiftEventName');
+            const eventName = shift.venueName || (Array.isArray(shift.eventsList) ? shift.eventsList.join(', ') : editBtn.dataset.venue || '');
+            if (eventNameInput) eventNameInput.value = eventName;
+
+            // 3. Type (Dropdown of all event types)
+            const currentType = shift.role || editBtn.dataset.role || 'Delivery';
+            const typeSelect = document.getElementById('editShiftType');
+            if (typeSelect) {
+                if (!Array.from(typeSelect.options).some(opt => opt.value === currentType)) {
+                    typeSelect.add(new Option(currentType, currentType));
+                }
+                typeSelect.value = currentType;
+            }
+
+            // 4. Meeting Location
+            const locationInput = document.getElementById('editShiftMeetingLocation');
+            if (locationInput) locationInput.value = shift.meetingLocation || editBtn.dataset.location || 'Warehouse';
+
+            // 5. Status (Confirmed & Un Confirmed)
+            const rawStatus = (shift.status || editBtn.dataset.status || 'unconfirmed').toLowerCase();
+            const statusSelect = document.getElementById('editShiftStatus');
+            if (statusSelect) {
+                if (rawStatus === 'confirmed' || rawStatus === 'unconfirmed') {
+                    statusSelect.value = rawStatus;
+                } else {
+                    let matchOpt = Array.from(statusSelect.options).find(opt => opt.value.toLowerCase() === rawStatus);
+                    if (!matchOpt) {
+                        const formatted = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+                        statusSelect.add(new Option(formatted, shift.status || rawStatus));
+                    }
+                    statusSelect.value = shift.status || rawStatus;
+                }
+            }
+
+            // Ensure roles and users are loaded
+            if (allUsersList.length === 0) {
+                await fetchRolesAndUsers();
+            }
+
+            // 6. Lead (Load all leads)
+            const leadSelect = document.getElementById('editShiftLead');
+            if (leadSelect) {
+                leadSelect.innerHTML = '<option value="">Select Lead...</option>';
+                const currentLeadId = String(shift.assignedUserId || shift.lead || editBtn.dataset.assigned || '').trim();
+
+                const leadUsers = [];
+                const seenLeadIds = new Set();
+
+                allUsersList.forEach(user => {
+                    const roleName = (user.displayRole || user.role || '').toLowerCase();
+                    const isLead = roleName.includes('lead');
+                    const uid = String(user.id).trim();
+
+                    if ((isLead || uid === currentLeadId) && !seenLeadIds.has(uid)) {
+                        seenLeadIds.add(uid);
+                        leadUsers.push(user);
+                    }
+                });
+
+                // Sort leads alphabetically
+                leadUsers.sort((a, b) => {
+                    const nameA = (a.displayName || a.email || a.phoneNumber || a.id).toLowerCase();
+                    const nameB = (b.displayName || b.email || b.phoneNumber || b.id).toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+
+                leadUsers.forEach(user => {
+                    const uid = String(user.id).trim();
+                    const displayName = user.displayName || user.email || user.phoneNumber || user.id;
+                    const opt = document.createElement('option');
+                    opt.value = uid;
+                    opt.textContent = displayName;
+                    if (uid === currentLeadId) opt.selected = true;
+                    leadSelect.appendChild(opt);
+                });
+
+                if (currentLeadId) {
+                    leadSelect.value = currentLeadId;
+                }
+                updateEditLeadRequirement();
+            }
+
+            // 7. Staff (Show all staff, with selected staff ticked)
+            const staffContainer = document.getElementById('editShiftStaffContainer');
+            if (staffContainer) {
+                staffContainer.innerHTML = '';
+
+                const currentStaffIds = new Set();
+                const addCandidateId = (val) => {
+                    if (val === null || val === undefined) return;
+                    if (typeof val === 'string' || typeof val === 'number') {
+                        currentStaffIds.add(String(val).trim());
+                    } else if (typeof val === 'object') {
+                        const extracted = val.id || val.uid || val.userId || val.employeeId || val.staffId;
+                        if (extracted) currentStaffIds.add(String(extracted).trim());
+                    }
+                };
+
+                if (Array.isArray(shift.staffMembers)) shift.staffMembers.forEach(addCandidateId);
+                if (Array.isArray(shift.staff)) shift.staff.forEach(addCandidateId);
+                if (Array.isArray(shift.staffList)) shift.staffList.forEach(addCandidateId);
+                if (Array.isArray(shift.assignedStaff)) shift.assignedStaff.forEach(addCandidateId);
+                if (Array.isArray(shift.assignedUsers)) shift.assignedUsers.forEach(addCandidateId);
+                if (shift.staffMembers && typeof shift.staffMembers === 'object' && !Array.isArray(shift.staffMembers)) {
+                    Object.keys(shift.staffMembers).forEach(k => {
+                        if (shift.staffMembers[k]) currentStaffIds.add(String(k).trim());
+                    });
+                }
+
+                // Gather all staff candidates
+                const staffUsersMap = new Map();
+                allUsersList.forEach(user => {
+                    const uid = String(user.id).trim();
+                    const rId = parseInt(user.roleId, 10);
+                    const roleName = (user.displayRole || user.role || '').toLowerCase();
+                    const isStaff = rId === 5 || roleName.includes('staff') || currentStaffIds.has(uid);
+
+                    if (isStaff && !staffUsersMap.has(uid)) {
+                        staffUsersMap.set(uid, user);
+                    }
+                });
+
+                // Ensure any ID from currentStaffIds not present in allUsersList is still represented
+                currentStaffIds.forEach(staffId => {
+                    if (!staffUsersMap.has(staffId)) {
+                        staffUsersMap.set(staffId, { id: staffId, displayName: `Staff (${staffId})` });
+                    }
+                });
+
+                const staffList = Array.from(staffUsersMap.values());
+
+                // Sort so checked/selected staff appear at the top, then alphabetically
+                staffList.sort((a, b) => {
+                    const uidA = String(a.id).trim();
+                    const uidB = String(b.id).trim();
+                    const aChecked = currentStaffIds.has(uidA) ? 1 : 0;
+                    const bChecked = currentStaffIds.has(uidB) ? 1 : 0;
+                    if (aChecked !== bChecked) return bChecked - aChecked; // selected first
+                    const nameA = (a.displayName || a.email || a.phoneNumber || a.id).toLowerCase();
+                    const nameB = (b.displayName || b.email || b.phoneNumber || b.id).toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+
+                staffList.forEach(user => {
+                    const uid = String(user.id).trim();
+                    const displayName = user.displayName || user.email || user.phoneNumber || user.id;
+                    const isChecked = currentStaffIds.has(uid);
+
+                    const div = document.createElement('div');
+                    div.className = 'd-flex justify-content-between align-items-center mb-2';
+                    div.innerHTML = `
+                      <label class="form-check-label" for="edit_staff_${uid}">${displayName}</label>
+                      <input class="form-check-input edit-staff-checkbox" type="checkbox" value="${uid}" id="edit_staff_${uid}" ${isChecked ? 'checked' : ''}>
+                    `;
+                    const cb = div.querySelector('.edit-staff-checkbox');
+                    if (cb && isChecked) {
+                        cb.checked = true;
+                    }
+                    staffContainer.appendChild(div);
+                });
+
+                if (staffContainer.innerHTML === '') {
+                    staffContainer.innerHTML = '<div class="text-muted small">No staff available</div>';
+                }
+            }
+
+            // 8. Notes
+            editShiftNotes = [];
+            if (Array.isArray(shift.notes)) {
+                editShiftNotes = [...shift.notes];
+            } else if (typeof shift.notes === 'string' && shift.notes.trim()) {
+                editShiftNotes = [shift.notes.trim()];
+            }
+            renderEditShiftNotes();
+
+            validateEditShiftTime();
             const modal = new bootstrap.Modal(document.getElementById('editShiftModal'));
             modal.show();
         }
     });
+
+    let editShiftNotes = [];
+
+    function renderEditShiftNotes() {
+        const notesList = document.getElementById('editShiftNotesList');
+        if (!notesList) return;
+        notesList.innerHTML = '';
+        if (editShiftNotes.length === 0) {
+            notesList.innerHTML = '<li class="list-group-item text-muted small py-2 text-center">No notes added</li>';
+            return;
+        }
+        editShiftNotes.forEach((note, index) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 px-3';
+            
+            const span = document.createElement('span');
+            span.className = 'small me-2 text-break';
+            span.textContent = `• ${note}`;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-close btn-close-xs ms-auto';
+            removeBtn.style.fontSize = '0.65rem';
+            removeBtn.setAttribute('aria-label', 'Remove note');
+            removeBtn.addEventListener('click', () => {
+                editShiftNotes.splice(index, 1);
+                renderEditShiftNotes();
+            });
+
+            li.appendChild(span);
+            li.appendChild(removeBtn);
+            notesList.appendChild(li);
+        });
+    }
+
+    function addEditShiftNoteItem(text) {
+        const trimmed = (text || '').trim();
+        if (!trimmed) return;
+        editShiftNotes.push(trimmed);
+        renderEditShiftNotes();
+    }
+
+    const addEditShiftNoteBtn = document.getElementById('addEditShiftNoteBtn');
+    const editShiftNoteInput = document.getElementById('editShiftNoteInput');
+    if (addEditShiftNoteBtn && editShiftNoteInput) {
+        addEditShiftNoteBtn.addEventListener('click', () => {
+            addEditShiftNoteItem(editShiftNoteInput.value);
+            editShiftNoteInput.value = '';
+            editShiftNoteInput.focus();
+        });
+
+        editShiftNoteInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addEditShiftNoteItem(editShiftNoteInput.value);
+                editShiftNoteInput.value = '';
+            }
+        });
+    }
+
+    function updateEditLeadRequirement() {
+        const locationInput = document.getElementById('editShiftMeetingLocation');
+        const leadSelect = document.getElementById('editShiftLead');
+        const leadLabel = document.querySelector('label[for="editShiftLead"]');
+        if (!locationInput || !leadSelect) return;
+
+        const isWarehouse = locationInput.value.trim().toLowerCase() === 'warehouse';
+        if (isWarehouse) {
+            leadSelect.setAttribute('required', '');
+            leadSelect.required = true;
+            if (leadLabel) leadLabel.textContent = 'Select Lead';
+            if (leadSelect.options && leadSelect.options.length > 0 && leadSelect.options[0].value === '') {
+                leadSelect.options[0].text = 'Select Lead...';
+            }
+        } else {
+            leadSelect.removeAttribute('required');
+            leadSelect.required = false;
+            leadSelect.setCustomValidity('');
+            if (leadLabel) leadLabel.textContent = 'Select Lead (Optional)';
+            if (leadSelect.options && leadSelect.options.length > 0 && leadSelect.options[0].value === '') {
+                leadSelect.options[0].text = 'Select Lead (Optional)...';
+            }
+        }
+    }
+
+    const editShiftMeetingLocInput = document.getElementById('editShiftMeetingLocation');
+    if (editShiftMeetingLocInput) {
+        editShiftMeetingLocInput.addEventListener('input', updateEditLeadRequirement);
+        editShiftMeetingLocInput.addEventListener('change', updateEditLeadRequirement);
+    }
+
+    function validateEditShiftTime() {
+        const idInput = document.getElementById('editShiftId');
+        const dateInput = document.getElementById('editShiftDate');
+        const timeInput = document.getElementById('editShiftStartTime');
+        const eventNameInput = document.getElementById('editShiftEventName');
+        const errorEl = document.getElementById('editShiftStartTimeError');
+
+        if (!timeInput) return true;
+
+        const currentShiftId = idInput ? idInput.value : '';
+        const selectedDate = dateInput ? dateInput.value : '';
+        const selectedTime = normalizeTime(timeInput.value);
+        const eventName = eventNameInput ? eventNameInput.value.trim() : '';
+
+        // Reset error state
+        timeInput.classList.remove('is-invalid');
+        timeInput.setCustomValidity('');
+        if (errorEl) {
+            errorEl.classList.add('d-none');
+            errorEl.innerHTML = '';
+        }
+
+        if (!selectedDate || !selectedTime || !eventName) return true;
+
+        // Extract events for current shift
+        const currentShift = allShifts.find(s => s.id === currentShiftId);
+        let editEvents = [];
+        if (currentShift && Array.isArray(currentShift.eventsList) && currentShift.eventsList.length > 0) {
+            editEvents = [...currentShift.eventsList];
+        } else {
+            editEvents = eventName.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        eventName.split(',').map(s => s.trim()).filter(Boolean).forEach(e => {
+            if (!editEvents.includes(e)) editEvents.push(e);
+        });
+
+        // Check against other shifts
+        let conflictingEvent = null;
+        for (const shift of allShifts) {
+            if (shift.id === currentShiftId) continue;
+            const shiftInfo = getShiftDateAndTime(shift);
+            if (shiftInfo.dateStr === selectedDate && shiftInfo.timeStr === selectedTime) {
+                const match = editEvents.find(e => shiftInfo.events.includes(e));
+                if (match) {
+                    conflictingEvent = match;
+                    break;
+                }
+            }
+        }
+
+        if (conflictingEvent) {
+            const formattedTime = formatTime12h(selectedTime);
+            timeInput.classList.add('is-invalid');
+            const message = `A shift for "${conflictingEvent}" is already scheduled at ${formattedTime} on this date. Please choose a different start time.`;
+            timeInput.setCustomValidity(message);
+            if (errorEl) {
+                errorEl.innerHTML = `<i class="ti ti-alert-circle me-1"></i>A shift for <strong>${conflictingEvent}</strong> is already scheduled at <strong>${formattedTime}</strong> on this date. Please choose a different start time.`;
+                errorEl.classList.remove('d-none');
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    const editShiftDateInput = document.getElementById('editShiftDate');
+    if (editShiftDateInput) {
+        editShiftDateInput.addEventListener('input', validateEditShiftTime);
+        editShiftDateInput.addEventListener('change', validateEditShiftTime);
+    }
+
+    const editShiftStartTimeInput = document.getElementById('editShiftStartTime');
+    if (editShiftStartTimeInput) {
+        editShiftStartTimeInput.addEventListener('input', validateEditShiftTime);
+        editShiftStartTimeInput.addEventListener('change', validateEditShiftTime);
+    }
 
     const editShiftForm = document.getElementById('editShiftForm');
     if (editShiftForm) {
         editShiftForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('editShiftId').value;
-            const venueName = document.getElementById('editShiftVenueName').value;
-            const dateTimeVal = document.getElementById('editShiftDateTime').value;
+            const currentShift = allShifts.find(s => s.id === id) || {};
+
+            const date = document.getElementById('editShiftDate').value;
+            const eventName = document.getElementById('editShiftEventName').value;
+            const typeVal = document.getElementById('editShiftType').value;
             const meetingLocation = document.getElementById('editShiftMeetingLocation').value;
-            const role = document.getElementById('editShiftRole').value;
+            const startTime = document.getElementById('editShiftStartTime').value;
+            const leadSelect = document.getElementById('editShiftLead');
+            const lead = leadSelect ? leadSelect.value : '';
             const status = document.getElementById('editShiftStatus').value;
-            const assignedUserId = document.getElementById('editShiftAssignedUserId').value;
+
+            // Check Warehouse lead requirement
+            const isWarehouse = meetingLocation.trim().toLowerCase() === 'warehouse';
+            if (isWarehouse && !lead) {
+                if (leadSelect) {
+                    leadSelect.setCustomValidity('Please select a Lead when Meeting Location is Warehouse.');
+                    leadSelect.reportValidity();
+                }
+                return;
+            } else if (leadSelect) {
+                leadSelect.setCustomValidity('');
+            }
+
+            // Validate time conflict
+            if (!validateEditShiftTime()) {
+                const timeInput = document.getElementById('editShiftStartTime');
+                if (timeInput) {
+                    timeInput.reportValidity();
+                    timeInput.focus();
+                }
+                return;
+            }
+
+            const staffCheckboxes = document.querySelectorAll('.edit-staff-checkbox:checked');
+            const selectedStaffIds = Array.from(staffCheckboxes).map(cb => cb.value);
+
+            const existingStaffMembers = Array.isArray(currentShift.staffMembers) ? currentShift.staffMembers : [];
+            const updatedStaffMembers = selectedStaffIds.map(staffId => {
+                const existing = existingStaffMembers.find(m => {
+                    const sid = typeof m === 'string' ? m : (m && (m.id || m.uid));
+                    return sid === staffId;
+                });
+                if (existing && typeof existing === 'object') {
+                    return existing;
+                }
+                return { id: staffId, status: 'pending' };
+            });
+
+            let dateTimeVal = null;
+            if (date && startTime) {
+                dateTimeVal = new Date(`${date}T${startTime}`);
+            }
 
             try {
-                await updateDoc(doc(db, "shifts", id), {
-                    venueName,
-                    dateTime: dateTimeVal ? new Date(dateTimeVal) : null,
+                const updatePayload = {
+                    venueName: eventName,
+                    dateTime: dateTimeVal,
+                    dateString: date || null,
+                    startTimeString: startTime || null,
                     meetingLocation,
-                    role,
+                    role: typeVal,
                     status,
-                    assignedUserId,
+                    assignedUserId: lead || null,
+                    staffMembers: updatedStaffMembers,
+                    staff: selectedStaffIds,
+                    notes: editShiftNotes,
                     updatedAt: serverTimestamp()
-                });
+                };
+
+                if (currentShift.eventTypes && typeof currentShift.eventTypes === 'object') {
+                    const updatedEventTypes = { ...currentShift.eventTypes };
+                    if (eventName) {
+                        eventName.split(',').map(s => s.trim()).filter(Boolean).forEach(ev => {
+                            updatedEventTypes[ev] = typeVal;
+                        });
+                    }
+                    updatePayload.eventTypes = updatedEventTypes;
+                }
+
+                await updateDoc(doc(db, "shifts", id), updatePayload);
                 
                 const modalEl = document.getElementById('editShiftModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);

@@ -91,6 +91,8 @@
       <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
       <li id="shiftsNavItem"><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
             class="nav-text">Shifts</span></a></li>
+      <li class="d-none" id="eventsNavItem"><a class="nav-link" href="events.html"><i class="ti ti-calendar"></i><span
+            class="nav-text">Events</span></a></li>
       <li id="timesheetNavItem"><a class="nav-link active" href="timesheet.html"><i class="ti ti-clock"></i><span
             class="nav-text">Timesheet</span></a></li>
       <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i
@@ -164,12 +166,20 @@
         <div class="table-responsive">
           <table class="table align-middle table-hover mb-0" id="timesheetTable">
             <thead class="table-light">
-              <tr>
-                <th scope="col" class="sortable-header" data-sort="name">
-                  Employee Name <i class="ti ti-selector text-muted small ms-1"></i>
+              <tr id="timesheetTableHeaderRow">
+                <th scope="col" class="sortable-header draggable-header" data-sort="name" data-col="name" draggable="true" title="Drag to reorder column, click to sort">
+                  <span class="d-inline-flex align-items-center">
+                    <i class="ti ti-grip-vertical text-muted me-1 drag-grip"></i>
+                    <span>Employee Name</span>
+                    <i class="ti ti-selector text-muted small ms-1 sort-icon"></i>
+                  </span>
                 </th>
-                <th scope="col" class="sortable-header" data-sort="date">
-                  Date <i class="ti ti-selector text-muted small ms-1"></i>
+                <th scope="col" class="sortable-header draggable-header" data-sort="date" data-col="date" draggable="true" title="Drag to reorder column, click to sort">
+                  <span class="d-inline-flex align-items-center">
+                    <i class="ti ti-grip-vertical text-muted me-1 drag-grip"></i>
+                    <span>Date</span>
+                    <i class="ti ti-selector text-muted small ms-1 sort-icon"></i>
+                  </span>
                 </th>
                 <th scope="col">Event Name</th>
                 <th scope="col">Clock In</th>

@@ -52,12 +52,14 @@
         <!-- Dropdown -->
         <li class="ms-3 dropdown">
           <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" class="avatar avatar-sm rounded-circle bg-light" id="userAvatarDropdown" />
+            <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt=""
+              class="avatar avatar-sm rounded-circle bg-light" id="userAvatarDropdown" />
           </a>
           <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 200px;">
             <div>
               <div class="d-flex gap-3 align-items-center border-dashed border-bottom px-3 py-3">
-                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" class="avatar avatar-md rounded-circle bg-light" id="userAvatarMenu" />
+                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt=""
+                  class="avatar avatar-md rounded-circle bg-light" id="userAvatarMenu" />
                 <div>
                   <h4 class="mb-0 small" id="userProfileName">Loading...</h4>
                 </div>
@@ -94,11 +96,14 @@
       <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
       <li id="shiftsNavItem"><a class="nav-link active" href="shifts.html"><i class="ti ti-calendar-event"></i><span
             class="nav-text">Shifts</span></a></li>
-      <li class="d-none" id="timesheetNavItem"><a class="nav-link" href="timesheet.html"><i class="ti ti-clock"></i><span
-            class="nav-text">Timesheet</span></a></li>
-      <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i class="ti ti-video"></i><span
-            class="nav-text">Resources</span></a></li>
-      <li class="d-none" id="receiptsNavItem"><a class="nav-link" href="receipts.html"><i class="ti ti-receipt"></i><span class="nav-text">Receipts</span></a></li>
+      <li class="d-none" id="eventsNavItem"><a class="nav-link" href="events.html"><i class="ti ti-calendar"></i><span
+            class="nav-text">Events</span></a></li>
+      <li class="d-none" id="timesheetNavItem"><a class="nav-link" href="timesheet.html"><i
+            class="ti ti-clock"></i><span class="nav-text">Timesheet</span></a></li>
+      <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i
+            class="ti ti-video"></i><span class="nav-text">Resources</span></a></li>
+      <li class="d-none" id="receiptsNavItem"><a class="nav-link" href="receipts.html"><i
+            class="ti ti-receipt"></i><span class="nav-text">Receipts</span></a></li>
     </ul>
 
   </aside>
@@ -120,11 +125,14 @@
             <div class="card-header bg-white d-flex justify-content-between align-items-center px-4 py-3">
               <h4 class="mb-0 h5" id="tableTitle">Shifts Management</h4>
               <div class="d-flex gap-2">
-                <input type="text" id="searchShiftInput" class="form-control form-control-sm" placeholder="Search by venue name..." style="max-width: 200px;">
-                <button class="btn btn-outline-primary btn-sm d-none text-nowrap" id="notifyUnconfirmedBtn" data-bs-toggle="modal" data-bs-target="#sendPushNotificationModal">
+                <input type="text" id="searchShiftInput" class="form-control form-control-sm"
+                  placeholder="Search by venue name..." style="max-width: 200px;">
+                <button class="btn btn-outline-primary btn-sm d-none text-nowrap" id="notifyUnconfirmedBtn"
+                  data-bs-toggle="modal" data-bs-target="#sendPushNotificationModal">
                   <i class="ti ti-bell-ringing"></i> Notify Unconfirmed
                 </button>
-                <button class="btn btn-primary btn-sm d-none text-nowrap" id="createShiftBtn" data-bs-toggle="modal" data-bs-target="#addShiftModal">
+                <button class="btn btn-primary btn-sm d-none text-nowrap" id="createShiftBtn" data-bs-toggle="modal"
+                  data-bs-target="#addShiftModal">
                   <i class="ti ti-plus"></i> Create Shift
                 </button>
               </div>
@@ -134,7 +142,7 @@
                 <table class="table table-hover table-borderless mb-0">
                   <thead class="table-light">
                     <tr>
-                      <th scope="col">Venue Name</th>
+                      <th scope="col">Event Name</th>
                       <th scope="col">Date & Time</th>
                       <th scope="col">Meeting Location</th>
                       <th scope="col">Role</th>
@@ -170,7 +178,8 @@
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Events & Types</label>
-                  <div class="border rounded p-2 bg-light-subtle" id="shiftEventContainer" style="max-height: 180px; overflow-y: auto;">
+                  <div class="border rounded p-2 bg-light-subtle" id="shiftEventContainer"
+                    style="max-height: 180px; overflow-y: auto;">
                     <div class="text-muted small py-2 text-center">Please select a date to view events.</div>
                   </div>
                 </div>
@@ -181,6 +190,7 @@
                 <div class="mb-3">
                   <label for="shiftStartTime" class="form-label">Start Time</label>
                   <input type="time" class="form-control" id="shiftStartTime" required>
+                  <div class="text-danger small mt-1 d-none" id="shiftStartTimeError"></div>
                 </div>
                 <div class="mb-3">
                   <label for="shiftLead" class="form-label">Select Lead</label>
@@ -197,10 +207,12 @@
                 <div class="mb-3">
                   <label class="form-label">Notes</label>
                   <div class="input-group mb-2">
-                    <input type="text" class="form-control" id="shiftNoteInput" placeholder="Add a note (e.g., Dress code)...">
+                    <input type="text" class="form-control" id="shiftNoteInput"
+                      placeholder="Add a note (e.g., Dress code)...">
                     <button class="btn btn-outline-secondary" type="button" id="addShiftNoteBtn">Add</button>
                   </div>
-                  <ul class="list-group list-group-flush border rounded" id="shiftNotesList" style="max-height: 140px; overflow-y: auto;">
+                  <ul class="list-group list-group-flush border rounded" id="shiftNotesList"
+                    style="max-height: 140px; overflow-y: auto;">
                     <li class="list-group-item text-muted small py-2 text-center">No notes added</li>
                   </ul>
                 </div>
@@ -227,31 +239,64 @@
             </div>
             <div class="modal-body">
               <div class="mb-3">
-                <label for="editShiftVenueName" class="form-label">Venue Name</label>
-                <input type="text" class="form-control" id="editShiftVenueName" required>
+                <label for="editShiftDate" class="form-label">Date</label>
+                <input type="date" class="form-control" id="editShiftDate" disabled readonly>
               </div>
               <div class="mb-3">
-                <label for="editShiftDateTime" class="form-label">Date & Time</label>
-                <input type="datetime-local" class="form-control" id="editShiftDateTime" required>
+                <label for="editShiftEventName" class="form-label">Event Name</label>
+                <input type="text" class="form-control" id="editShiftEventName" disabled readonly>
+              </div>
+              <div class="mb-3">
+                <label for="editShiftType" class="form-label">Type</label>
+                <select class="form-select" id="editShiftType" required>
+                  <option value="Delivery">Delivery</option>
+                  <option value="Pickup">Pickup</option>
+                  <option value="Delivery & Pickup">Delivery & Pickup</option>
+                  <option value="Full Staff Event">Full Staff Event</option>
+                  <option value="Runtime">Runtime</option>
+                  <option value="Setup">Setup</option>
+                  <option value="Runtime & Pickup">Runtime & Pickup</option>
+                </select>
               </div>
               <div class="mb-3">
                 <label for="editShiftMeetingLocation" class="form-label">Meeting Location</label>
                 <input type="text" class="form-control" id="editShiftMeetingLocation" required>
               </div>
               <div class="mb-3">
-                <label for="editShiftRole" class="form-label">Role</label>
-                <input type="text" class="form-control" id="editShiftRole" required>
+                <label for="editShiftStartTime" class="form-label">Start Time</label>
+                <input type="time" class="form-control" id="editShiftStartTime" required>
+                <div class="text-danger small mt-1 d-none" id="editShiftStartTimeError"></div>
+              </div>
+              <div class="mb-3">
+                <label for="editShiftLead" class="form-label">Select Lead</label>
+                <select class="form-select" id="editShiftLead">
+                  <option value="" selected>Loading leads...</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Select Staff</label>
+                <div class="border rounded p-2" id="editShiftStaffContainer" style="max-height: 150px; overflow-y: auto;">
+                  <div class="text-muted small">Loading staff...</div>
+                </div>
               </div>
               <div class="mb-3">
                 <label for="editShiftStatus" class="form-label">Status</label>
                 <select class="form-select" id="editShiftStatus" required>
-                  <option value="unconfirmed">unconfirmed</option>
-                  <option value="confirmed">confirmed</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="unconfirmed">Un Confirmed</option>
                 </select>
               </div>
               <div class="mb-3">
-                <label for="editShiftAssignedUserId" class="form-label">Assigned User ID (optional)</label>
-                <input type="text" class="form-control" id="editShiftAssignedUserId">
+                <label class="form-label">Notes</label>
+                <div class="input-group mb-2">
+                  <input type="text" class="form-control" id="editShiftNoteInput"
+                    placeholder="Add a note (e.g., Dress code)...">
+                  <button class="btn btn-outline-secondary" type="button" id="addEditShiftNoteBtn">Add</button>
+                </div>
+                <ul class="list-group list-group-flush border rounded" id="editShiftNotesList"
+                  style="max-height: 140px; overflow-y: auto;">
+                  <li class="list-group-item text-muted small py-2 text-center">No notes added</li>
+                </ul>
               </div>
             </div>
             <div class="modal-footer">
@@ -282,7 +327,8 @@
     </div>
 
     <!-- Send Push Notification Modal -->
-    <div class="modal fade" id="sendPushNotificationModal" tabindex="-1" aria-labelledby="sendPushNotificationModalLabel" aria-hidden="true">
+    <div class="modal fade" id="sendPushNotificationModal" tabindex="-1"
+      aria-labelledby="sendPushNotificationModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
           <form id="sendPushNotificationForm">
@@ -291,7 +337,8 @@
               <h5 class="modal-title d-flex align-items-center gap-2 text-white" id="sendPushNotificationModalLabel">
                 <i class="ti ti-bell-ringing fs-4"></i> Send Push Notification
               </h5>
-              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
               <!-- Target summary alert -->
@@ -301,20 +348,25 @@
                 </div>
                 <div class="flex-grow-1">
                   <h6 class="mb-1 fw-bold text-dark" id="pushTargetTitle">Targeting: Unconfirmed Shifts</h6>
-                  <p class="mb-0 small text-muted" id="pushTargetSubtitle">Sending notification to all users assigned to unconfirmed shifts.</p>
+                  <p class="mb-0 small text-muted" id="pushTargetSubtitle">Sending notification to all users assigned to
+                    unconfirmed shifts.</p>
                 </div>
               </div>
 
               <!-- Title Input -->
               <div class="mb-3">
-                <label for="pushNotificationTitle" class="form-label fw-semibold">Notification Title <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="pushNotificationTitle" required maxlength="100" placeholder="e.g., Shift Confirmation Reminder">
+                <label for="pushNotificationTitle" class="form-label fw-semibold">Notification Title <span
+                    class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="pushNotificationTitle" required maxlength="100"
+                  placeholder="e.g., Shift Confirmation Reminder">
               </div>
 
               <!-- Body / Message Textarea -->
               <div class="mb-3">
-                <label for="pushNotificationBody" class="form-label fw-semibold">Notification Message <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="pushNotificationBody" rows="3" required maxlength="300" placeholder="Enter message text..."></textarea>
+                <label for="pushNotificationBody" class="form-label fw-semibold">Notification Message <span
+                    class="text-danger">*</span></label>
+                <textarea class="form-control" id="pushNotificationBody" rows="3" required maxlength="300"
+                  placeholder="Enter message text..."></textarea>
                 <div class="form-text small text-muted">Include venue details and call to action for the staff.</div>
               </div>
 
@@ -322,16 +374,19 @@
               <div class="mb-2">
                 <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
                   <span>Recipients (<span id="pushRecipientsCount">0</span> users)</span>
-                  <span class="badge bg-secondary-subtle text-secondary fw-normal small" id="pushUnconfirmedBadge">Status: Unconfirmed</span>
+                  <span class="badge bg-secondary-subtle text-secondary fw-normal small"
+                    id="pushUnconfirmedBadge">Status: Unconfirmed</span>
                 </label>
-                <div class="border rounded p-2 bg-light-subtle" id="pushRecipientsContainer" style="max-height: 180px; overflow-y: auto;">
+                <div class="border rounded p-2 bg-light-subtle" id="pushRecipientsContainer"
+                  style="max-height: 180px; overflow-y: auto;">
                   <div class="text-muted small py-2 text-center">Loading recipient staff...</div>
                 </div>
               </div>
             </div>
             <div class="modal-footer bg-light">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" id="sendPushNotificationSubmitBtn">
+              <button type="submit" class="btn btn-primary d-flex align-items-center gap-2"
+                id="sendPushNotificationSubmitBtn">
                 <i class="ti ti-send"></i>
                 <span id="sendPushNotificationBtnText">Send Push Notification</span>
               </button>
@@ -343,13 +398,15 @@
 
     <!-- Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
-      <div id="pushNotificationToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div id="pushNotificationToast" class="toast align-items-center text-bg-success border-0" role="alert"
+        aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
           <div class="toast-body d-flex align-items-center gap-2" id="pushNotificationToastBody">
             <i class="ti ti-circle-check fs-5"></i>
             <span id="pushNotificationToastText">Push notification sent successfully!</span>
           </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+            aria-label="Close"></button>
         </div>
       </div>
     </div>

@@ -59,4 +59,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
         console.error("Error fetching total receipts:", e);
     }
+
+    try {
+        // Fetch Total Events
+        const totalEventsStat = document.getElementById('totalEventsStat');
+        if (totalEventsStat) {
+            const apiKey = import.meta.env.VITE_IO_API_KEY;
+            if (apiKey) {
+                const res = await fetch(`/io-api/leads/?apiKey=${apiKey}&limit=250`);
+                if (res.ok) {
+                    const data = await res.json();
+                    let leads = [];
+                    if (Array.isArray(data)) leads = data;
+                    else if (data.items && Array.isArray(data.items)) leads = data.items;
+                    else if (data.data && Array.isArray(data.data)) leads = data.data;
+                    totalEventsStat.textContent = leads.length;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error fetching total events:", e);
+    }
 });

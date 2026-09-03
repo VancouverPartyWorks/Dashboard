@@ -147,7 +147,32 @@ function applyRolePermissions(userData) {
   const receiptsCardCol = document.getElementById('receiptsCardCol');
   
   const isAccountant = (userData.role && (userData.role.toLowerCase() === 'accountant' || userData.role.toLowerCase() === 'accounts')) || roleId === 3;
-  const isSuperAdmin = roleId === 1;
+  const isSuperAdmin = roleId === 1 || (userData.role && userData.role.toLowerCase() === 'super admin');
+  const isHr = roleId === 2 || (userData.role && userData.role.toLowerCase() === 'hr');
+  const canAccessEvents = isSuperAdmin || isHr || isSpectator;
+
+  const eventsNavItem = document.getElementById('eventsNavItem');
+  const eventsCardCol = document.getElementById('eventsCardCol');
+
+  if (eventsNavItem) {
+    if (canAccessEvents) {
+      eventsNavItem.classList.remove('d-none');
+      eventsNavItem.style.display = '';
+    } else {
+      eventsNavItem.classList.add('d-none');
+      eventsNavItem.style.display = 'none';
+    }
+  }
+
+  if (eventsCardCol) {
+    if (canAccessEvents) {
+      eventsCardCol.classList.remove('d-none');
+      eventsCardCol.style.display = '';
+    } else {
+      eventsCardCol.classList.add('d-none');
+      eventsCardCol.style.display = 'none';
+    }
+  }
 
   if (shiftsNavItem) {
     if (isAccountant) {
@@ -223,6 +248,9 @@ function applyRolePermissions(userData) {
   if (!isAccountant && !isSuperAdmin && currentPage === 'timesheet.html') {
     redirectTo('./index.html');
   }
+  if (!canAccessEvents && currentPage === 'events.html') {
+    redirectTo('./index.html');
+  }
 }
 
 function updateUserProfileUI(userData) {
@@ -239,7 +267,7 @@ function updateUserProfileUI(userData) {
     roleText = 'Super Admin';
     avatarNum = 1;
   } else if (userData.roleId === 2) {
-    roleText = 'Admin';
+    roleText = 'HR';
     avatarNum = 2;
   } else if (userData.roleId === 3) {
     roleText = 'Accountant';

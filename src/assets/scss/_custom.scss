@@ -143,3 +143,46 @@ footer {
 @import "./button";
 @import "./icon-shape";
 @import "./utilities";
+
+// Draggable Table Column Headers
+.draggable-header {
+	cursor: grab;
+	user-select: none;
+	transition: background-color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+	position: relative;
+
+	* {
+		pointer-events: none;
+	}
+
+	&:hover {
+		background-color: rgba(13, 110, 253, 0.05);
+
+		.drag-grip {
+			opacity: 0.9 !important;
+			color: #0d6efd !important;
+		}
+	}
+
+	&:active {
+		cursor: grabbing;
+	}
+
+	.drag-grip {
+		opacity: 0.4;
+		transition: opacity 0.15s ease, color 0.15s ease;
+		cursor: grab;
+		font-size: 0.85rem;
+	}
+
+	&.dragging {
+		opacity: 0.4;
+		background-color: #f1f5f9 !important;
+	}
+
+	&.drag-over {
+		background-color: rgba(13, 110, 253, 0.12) !important;
+		box-shadow: inset 0 0 0 2px #0d6efd;
+		border-radius: 4px;
+	}
+}

@@ -96,6 +96,8 @@
       <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
       <li id="shiftsNavItem"><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
             class="nav-text">Shifts</span></a></li>
+      <li class="d-none" id="eventsNavItem"><a class="nav-link" href="events.html"><i class="ti ti-calendar"></i><span
+            class="nav-text">Events</span></a></li>
       <li class="d-none" id="timesheetNavItem"><a class="nav-link" href="timesheet.html"><i
             class="ti ti-clock"></i><span class="nav-text">Timesheet</span></a></li>
       <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i
@@ -144,6 +146,21 @@
                 <h2 class="mb-3 fs-6">Active Shifts</h2>
                 <h3 class="fw-bold mb-0" id="totalShiftsStat">0</h3>
                 <a href="shifts.html" class="text-success mb-0 small">Manage Shifts &rarr;</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-12 d-none" id="eventsCardCol">
+          <div class="card p-4 border rounded-2" style="background-color: rgba(111, 66, 193, 0.08); border-color: rgba(111, 66, 193, 0.25) !important;">
+            <div class="d-flex gap-3">
+              <div class="icon-shape icon-md text-white rounded-2" style="background-color: #6f42c1;">
+                <i class="ti ti-calendar fs-4"></i>
+              </div>
+              <div>
+                <h2 class="mb-3 fs-6">Total Events</h2>
+                <h3 class="fw-bold mb-0" id="totalEventsStat">0</h3>
+                <a href="events.html" class="mb-0 small fw-medium" style="color: #6f42c1;">Manage Events &rarr;</a>
               </div>
             </div>
           </div>

@@ -81,6 +81,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    const isHr = roleId === '2' || roleId === 2;
+    const canAccessEvents = isSuperAdmin || isHr || isSpectator;
+
+    const eventsNavItem = document.getElementById('eventsNavItem');
+    const eventsCardCol = document.getElementById('eventsCardCol');
+    if (eventsNavItem) {
+      if (canAccessEvents) {
+        eventsNavItem.classList.remove('d-none');
+        eventsNavItem.style.display = '';
+      } else {
+        eventsNavItem.classList.add('d-none');
+        eventsNavItem.style.display = 'none';
+      }
+    }
+    if (eventsCardCol) {
+      if (canAccessEvents) {
+        eventsCardCol.classList.remove('d-none');
+        eventsCardCol.style.display = '';
+      } else {
+        eventsCardCol.classList.add('d-none');
+        eventsCardCol.style.display = 'none';
+      }
+    }
+
     const receiptsCardCol = document.getElementById('receiptsCardCol');
     if (receiptsCardCol) {
       if (isAccountant || isSuperAdmin) {
@@ -90,5 +114,10 @@ document.addEventListener('DOMContentLoaded', () => {
         receiptsCardCol.classList.add('d-none');
         receiptsCardCol.style.display = 'none';
       }
+    }
+
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    if (!canAccessEvents && currentPage === 'events.html') {
+      window.location.href = './index.html';
     }
 });

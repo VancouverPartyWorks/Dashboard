@@ -12,6 +12,20 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentPage = 1;
   const RECORDS_PER_PAGE = 20;
 
+  // Column order state (first two swappable columns: 'name' and 'date')
+  let columnOrder = ['name', 'date'];
+  try {
+    const savedOrder = localStorage.getItem('timesheet_col_order');
+    if (savedOrder) {
+      const parsed = JSON.parse(savedOrder);
+      if (Array.isArray(parsed) && parsed.length === 2 && parsed.includes('name') && parsed.includes('date')) {
+        columnOrder = parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading saved column order:', e);
+  }
+
   // DOM Elements
   const timesheetTableBody = document.getElementById('timesheetTableBody');
   const filterStartDate = document.getElementById('filterStartDate');
@@ -443,14 +457,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const isApproved = log.flag === 'Approved' || log.status === 'approved';
       const isMissingClockOut = !log.clockOut;
 
+      // Render column cell according to column key
+      const renderColCell = (colKey) => {
+        if (colKey === 'name') {
+          return `
+            <td class="fw-semibold text-dark">
+              <div>
+                <div class="fw-semibold text-dark">${escapeHtml(log.employeeName || 'Unknown')}</div>
+                ${log.role ? `<span class="badge bg-light text-muted border small" style="font-size: 0.7rem; font-weight: 500;">${escapeHtml(log.role)}</span>` : ''}
+              </div>
+            </td>
+          `;
+        } else if (colKey === 'date') {
+          return `<td>${log.date || 'N/A'}</td>`;
+        }
+        return '';
+      };
+
       tr.innerHTML = `
-        <td class="fw-semibold text-dark">
-          <div>
-            <div class="fw-semibold text-dark">${escapeHtml(log.employeeName || 'Unknown')}</div>
-            ${log.role ? `<span class="badge bg-light text-muted border small" style="font-size: 0.7rem; font-weight: 500;">${escapeHtml(log.role)}</span>` : ''}
-          </div>
-        </td>
-        <td>${log.date || 'N/A'}</td>
+        ${renderColCell(columnOrder[0])}
+        ${renderColCell(columnOrder[1])}
         <td class="text-secondary">${escapeHtml(log.eventName || 'N/A')}</td>
         <td><span class="badge bg-light text-dark border font-monospace">${formattedClockIn}</span></td>
         <td><span class="badge ${log.clockOut ? 'bg-light text-dark border' : 'bg-danger-subtle text-danger border border-danger-subtle'} font-monospace">${formattedClockOut}</span></td>
@@ -759,33 +785,45 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Format data for Excel worksheet
-    const excelRows = approvedLogs.map(log => ({
-      "Employee Name": log.employeeName || 'Unknown',
-      "Role": log.role || 'Staff',
-      "Date": log.date || '',
-      "Event Name": log.eventName || '',
-      "Clock In": formatTime(log.clockIn),
-      "Clock Out": formatTime(log.clockOut),
-      "Total Hours": parseFloat(log.totalHours || 0).toFixed(2),
-      "Flag / Status": log.flag || 'Approved',
-      "Adjustment Note": log.adjustmentNote || ''
-    }));
+    // Format data for Excel worksheet matching active columnOrder
+    const excelRows = approvedLogs.map(log => {
+      const row = {};
+      columnOrder.forEach(col => {
+        if (col === 'name') {
+          row["Employee Name"] = log.employeeName || 'Unknown';
+          row["Role"] = log.role || 'Staff';
+        } else if (col === 'date') {
+          row["Date"] = log.date || '';
+        }
+      });
+      row["Event Name"] = log.eventName || '';
+      row["Clock In"] = formatTime(log.clockIn);
+      row["Clock Out"] = formatTime(log.clockOut);
+      row["Total Hours"] = parseFloat(log.totalHours || 0).toFixed(2);
+      row["Flag / Status"] = log.flag || 'Approved';
+      row["Adjustment Note"] = log.adjustmentNote || '';
+      return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(excelRows);
     
     // Auto-fit column widths
-    const colWidths = [
-      { wch: 22 }, // Employee Name
-      { wch: 18 }, // Role
-      { wch: 14 }, // Date
+    const colWidths = [];
+    columnOrder.forEach(col => {
+      if (col === 'name') {
+        colWidths.push({ wch: 22 }, { wch: 18 });
+      } else if (col === 'date') {
+        colWidths.push({ wch: 14 });
+      }
+    });
+    colWidths.push(
       { wch: 30 }, // Event Name
       { wch: 14 }, // Clock In
       { wch: 14 }, // Clock Out
       { wch: 14 }, // Total Hours
       { wch: 16 }, // Flag / Status
       { wch: 35 }  // Adjustment Note
-    ];
+    );
     worksheet['!cols'] = colWidths;
 
     const workbook = XLSX.utils.book_new();
@@ -802,9 +840,112 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sortField) sortField.addEventListener('change', applyFiltersAndSorting);
   if (sortOrder) sortOrder.addEventListener('change', applyFiltersAndSorting);
 
+  let isDragging = false;
+  let dragEndTime = 0;
+  let draggedColKey = null;
+
+  // Sync DOM order of the first two headers according to columnOrder
+  function syncTableHeaderOrder() {
+    const headerRow = document.getElementById('timesheetTableHeaderRow');
+    if (!headerRow) return;
+    const col0 = headerRow.querySelector(`[data-col="${columnOrder[0]}"]`);
+    const col1 = headerRow.querySelector(`[data-col="${columnOrder[1]}"]`);
+    const thirdTh = headerRow.querySelectorAll('th:not(.draggable-header)')[0];
+    if (col0 && col1 && thirdTh) {
+      headerRow.insertBefore(col0, thirdTh);
+      headerRow.insertBefore(col1, thirdTh);
+    }
+  }
+
+  // Setup HTML5 Drag and Drop on the first two headers
+  function setupDraggableHeaders() {
+    const draggableHeaders = document.querySelectorAll('.draggable-header');
+
+    draggableHeaders.forEach(th => {
+      th.addEventListener('dragstart', (e) => {
+        isDragging = true;
+        draggedColKey = th.dataset.col;
+        th.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', th.dataset.col);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      th.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const targetCol = th.dataset.col;
+        if (targetCol && draggedColKey && targetCol !== draggedColKey) {
+          th.classList.add('drag-over');
+        }
+      });
+
+      th.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        const targetCol = th.dataset.col;
+        if (targetCol && draggedColKey && targetCol !== draggedColKey) {
+          th.classList.add('drag-over');
+        }
+      });
+
+      th.addEventListener('dragleave', (e) => {
+        if (!th.contains(e.relatedTarget)) {
+          th.classList.remove('drag-over');
+        }
+      });
+
+      th.addEventListener('drop', (e) => {
+        e.preventDefault();
+        th.classList.remove('drag-over');
+        const sourceCol = e.dataTransfer.getData('text/plain') || draggedColKey;
+        const targetCol = th.dataset.col;
+
+        if (sourceCol && targetCol && sourceCol !== targetCol) {
+          if ((sourceCol === 'name' && targetCol === 'date') || (sourceCol === 'date' && targetCol === 'name')) {
+            // Swap first two columns
+            columnOrder = [columnOrder[1], columnOrder[0]];
+            try {
+              localStorage.setItem('timesheet_col_order', JSON.stringify(columnOrder));
+            } catch (err) {
+              console.warn('Unable to persist column order to localStorage', err);
+            }
+            syncTableHeaderOrder();
+            renderTablePage();
+          }
+        }
+      });
+
+      th.addEventListener('dragend', () => {
+        th.classList.remove('dragging');
+        draggableHeaders.forEach(h => h.classList.remove('drag-over'));
+        draggedColKey = null;
+        dragEndTime = Date.now();
+        setTimeout(() => {
+          isDragging = false;
+        }, 150);
+      });
+    });
+  }
+
+  // Update sort icons in table header
+  function updateSortIcons() {
+    document.querySelectorAll('.sortable-header').forEach(th => {
+      const icon = th.querySelector('.sort-icon');
+      if (!icon) return;
+      if (th.dataset.sort === currentSortField) {
+        icon.className = `ti ${currentSortOrder === 'asc' ? 'ti-arrow-up' : 'ti-arrow-down'} text-primary small ms-1 sort-icon`;
+      } else {
+        icon.className = 'ti ti-selector text-muted small ms-1 sort-icon';
+      }
+    });
+  }
+
   // Table header click sorting
   document.querySelectorAll('.sortable-header').forEach(th => {
     th.addEventListener('click', () => {
+      // Prevent sort action if this was a drag gesture
+      if (isDragging || Date.now() - dragEndTime < 200) {
+        return;
+      }
       const field = th.dataset.sort;
       if (currentSortField === field) {
         currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
@@ -814,6 +955,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (sortField) sortField.value = currentSortField;
       if (sortOrder) sortOrder.value = currentSortOrder;
+      updateSortIcons();
       applyFiltersAndSorting();
     });
   });
@@ -827,6 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentSortOrder = 'asc';
     if (sortField) sortField.value = 'name';
     if (sortOrder) sortOrder.value = 'asc';
+    updateSortIcons();
     applyFiltersAndSorting();
   });
 
@@ -884,5 +1027,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initialize
+  syncTableHeaderOrder();
+  setupDraggableHeaders();
+  updateSortIcons();
   loadTimesheetData();
 });
