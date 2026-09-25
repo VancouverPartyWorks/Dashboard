@@ -12,6 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const modalImage = document.getElementById('modalImage');
 
+    const paginationInfo = document.getElementById('paginationInfo');
+    const paginationControls = document.getElementById('paginationControls');
+
+    let allReceipts = [];
+    let currentPage = 1;
+    const pageSize = 10;
+
     const userRoleId = localStorage.getItem('userRoleId');
     const isSpectator = userRoleId === '6' || userRoleId === 6;
 
@@ -117,10 +124,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (userFolders.length === 0) {
                 receiptsTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No receipts found.</td></tr>`;
+                if (paginationInfo) paginationInfo.textContent = 'Showing 0 of 0 receipts';
+                if (paginationControls) paginationControls.innerHTML = '';
                 return;
             }
 
-            let html = '';
+            allReceipts = [];
             for (const folderRef of userFolders) {
                 const userId = folderRef.name;
                 
@@ -170,17 +179,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     `}
                                 </td>
                             `;
-                            html += `
-                                <tr>
-                                    <td class="align-middle">${escapeHtml(userName)}</td>
-                                    <td class="align-middle">${uploadTime}</td>
-                                    <td class="align-middle">${escapeHtml(title)}</td>
-                                    <td class="align-middle">
-                                        <img src="${url}" alt="Receipt" class="img-thumbnail" style="width: 100px; height: 70px; object-fit: cover; cursor: pointer;" data-path="${itemRef.fullPath}" data-url="${url}" data-filename="${escapeHtml(fileName)}" data-title="${escapeHtml(title)}">
-                                    </td>
-                                    ${actionCell}
-                                </tr>
-                            `;
+                            allReceipts.push({
+                                userName: userName,
+                                uploadTimeStr: uploadTime,
+                                uploadTimeObj: new Date(metadata.timeCreated),
+                                title: title,
+                                url: url,
+                                fileName: fileName,
+                                fullPath: itemRef.fullPath
+                            });
                         } catch (err) {
                             console.error('Error fetching image URL', err);
                         }
@@ -188,15 +195,116 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (html === '') {
-                receiptsTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No receipts found.</td></tr>`;
-            } else {
-                receiptsTableBody.innerHTML = html;
-            }
+            // Sort receipts by newest first
+            allReceipts.sort((a, b) => b.uploadTimeObj - a.uploadTimeObj);
+            
+            currentPage = 1;
+            renderReceiptsTable();
         } catch (error) {
             console.error('Error loading receipts:', error);
             receiptsTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">Error loading receipts.</td></tr>`;
         }
+    }
+
+    function renderReceiptsTable() {
+        if (!receiptsTableBody) return;
+        
+        const totalItems = allReceipts.length;
+        const totalPages = Math.ceil(totalItems / pageSize) || 1;
+        
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        if (totalItems === 0) {
+            receiptsTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No receipts found.</td></tr>`;
+            if (paginationInfo) paginationInfo.textContent = 'Showing 0 of 0 receipts';
+            if (paginationControls) paginationControls.innerHTML = '';
+            return;
+        }
+
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalItems);
+        const pageReceipts = allReceipts.slice(startIndex, endIndex);
+
+        if (paginationInfo) {
+            paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} receipts`;
+        }
+
+        let html = '';
+        pageReceipts.forEach(receipt => {
+            const actionCell = `
+                <td class="align-middle">
+                    <button class="btn btn-sm btn-outline-primary download-receipt-btn ${isSpectator ? '' : 'me-2'}" data-path="${receipt.fullPath}" data-url="${receipt.url}" data-filename="${escapeHtml(receipt.fileName)}" title="Download Receipt">
+                        <i class="ti ti-download"></i>
+                    </button>
+                    ${isSpectator ? '' : `
+                    <button class="btn btn-sm btn-outline-danger delete-receipt-btn" data-path="${receipt.fullPath}" title="Delete Receipt">
+                        <i class="ti ti-trash"></i>
+                    </button>
+                    `}
+                </td>
+            `;
+            html += `
+                <tr>
+                    <td class="align-middle">${escapeHtml(receipt.userName)}</td>
+                    <td class="align-middle">${receipt.uploadTimeStr}</td>
+                    <td class="align-middle">${escapeHtml(receipt.title)}</td>
+                    <td class="align-middle">
+                        <img src="${receipt.url}" alt="Receipt" class="img-thumbnail" style="width: 100px; height: 70px; object-fit: cover; cursor: pointer;" data-path="${receipt.fullPath}" data-url="${receipt.url}" data-filename="${escapeHtml(receipt.fileName)}" data-title="${escapeHtml(receipt.title)}">
+                    </td>
+                    ${actionCell}
+                </tr>
+            `;
+        });
+        
+        receiptsTableBody.innerHTML = html;
+        renderPaginationControls(totalPages);
+    }
+
+    function renderPaginationControls(totalPages) {
+        if (typeof paginationControls === 'undefined' || !paginationControls) return;
+        paginationControls.innerHTML = '';
+
+        // Previous Button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+        prevLi.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                renderReceiptsTable();
+            }
+        });
+        paginationControls.appendChild(prevLi);
+
+        // Page Numbers
+        for (let p = 1; p <= totalPages; p++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${p === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+            li.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage !== p) {
+                    currentPage = p;
+                    renderReceiptsTable();
+                }
+            });
+            paginationControls.appendChild(li);
+        }
+
+        // Next Button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+        nextLi.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderReceiptsTable();
+            }
+        });
+        paginationControls.appendChild(nextLi);
     }
 
     if (receiptsTableBody) {

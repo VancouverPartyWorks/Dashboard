@@ -31,7 +31,7 @@
         <!-- Bell icon -->
         <li>
           <a class="position-relative btn-icon btn-sm btn-light btn rounded-circle" data-bs-toggle="dropdown"
-            aria-expanded="false" href="#" role="button">
+            aria-expanded="false" href="#" role="button" data-bs-offset="15,10">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
               class="icon icon-tabler icons-tabler-outline icon-tabler-bell">
@@ -51,7 +51,7 @@
         </li>
         <!-- Dropdown -->
         <li class="ms-3 dropdown">
-          <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <a href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-offset="10,10">
             <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt=""
               class="avatar avatar-sm rounded-circle bg-light" id="userAvatarDropdown" />
           </a>
@@ -119,6 +119,43 @@
           </div>
         </div>
       </div>
+
+      <!-- Status Alert Section -->
+      <div class="row mb-3 d-none" id="shiftStatusAlertContainer">
+        <div class="col-12">
+          <div class="alert mb-0 d-flex align-items-center gap-2 border" id="shiftStatusAlert" role="alert">
+            <i id="shiftStatusAlertIcon" class="ti fs-4"></i>
+            <span id="shiftStatusAlertMessage"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters Section -->
+      <div class="row mb-3 align-items-center">
+        <div class="col-12 d-flex flex-wrap align-items-center gap-2">
+          <span class="fw-medium text-secondary me-2"><i class="ti ti-filter"></i> Filters:</span>
+          <button class="btn btn-outline-primary btn-sm" id="filterTodayBtn">Today</button>
+          <button class="btn btn-outline-primary btn-sm" id="filterTomorrowBtn">Tomorrow</button>
+          <button class="btn btn-outline-primary btn-sm" id="filterSelectDateBtn">Select Date</button>
+
+          <div id="filterDateContainer" class="d-none d-flex gap-2 align-items-center">
+            <input type="date" class="form-control form-control-sm" id="filterDateInput">
+            <button class="btn btn-primary btn-sm" id="filterDateApplyBtn">Apply</button>
+          </div>
+
+          <div class="ms-1 border-start ps-2 d-flex align-items-center gap-2">
+            <select class="form-select form-select-sm" id="filterStatusSelect" style="width: auto;">
+              <option value="">All Statuses</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+
+          <button class="btn btn-ghost-secondary btn-sm d-none" id="filterClearBtn">Clear Filters</button>
+        </div>
+      </div>
+
       <div class="row g-3 mb-3">
         <div class="col-12">
           <div class="card">
@@ -126,11 +163,7 @@
               <h4 class="mb-0 h5" id="tableTitle">Shifts Management</h4>
               <div class="d-flex gap-2">
                 <input type="text" id="searchShiftInput" class="form-control form-control-sm"
-                  placeholder="Search by venue name..." style="max-width: 200px;">
-                <button class="btn btn-outline-primary btn-sm d-none text-nowrap" id="notifyUnconfirmedBtn"
-                  data-bs-toggle="modal" data-bs-target="#sendPushNotificationModal">
-                  <i class="ti ti-bell-ringing"></i> Notify Unconfirmed
-                </button>
+                  placeholder="Search by venue name..." style="width: 250px;">
                 <button class="btn btn-primary btn-sm d-none text-nowrap" id="createShiftBtn" data-bs-toggle="modal"
                   data-bs-target="#addShiftModal">
                   <i class="ti ti-plus"></i> Create Shift
@@ -145,20 +178,30 @@
                       <th scope="col">Event Name</th>
                       <th scope="col">Date & Time</th>
                       <th scope="col">Meeting Location</th>
-                      <th scope="col">Role</th>
-                      <th scope="col">Status</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Members Status</th>
+                      <th scope="col">Shift Status</th>
                       <th scope="col" class="text-end" id="actionColumnHeader">Action</th>
                     </tr>
                   </thead>
                   <tbody id="shiftsTableBody">
                     <tr>
-                      <td colspan="6" class="text-center py-4 text-muted">No shifts found.</td>
+                      <td colspan="7" class="text-center py-4 text-muted">No shifts found.</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
+              <!-- Pagination controls -->
+              <div class="d-flex align-items-center justify-content-between p-3 border-top" id="paginationWrapper">
+                <div class="small text-muted" id="paginationInfo">
+                  Showing 0 of 0 shifts
+                </div>
+                <nav aria-label="Shifts pagination">
+                  <ul class="pagination pagination-sm mb-0 gap-1" id="paginationControls">
+                  </ul>
+                </nav>
+              </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -172,8 +215,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                <div class="mb-3">
-                  <label for="shiftDate" class="form-label">Date</label>
+                <div class="mb-3 d-flex align-items-center">
+                  <label for="shiftDate" class="form-label mb-0 me-3 text-nowrap">Date</label>
                   <input type="date" class="form-control" id="shiftDate" required>
                 </div>
                 <div class="mb-3">
@@ -183,23 +226,31 @@
                     <div class="text-muted small py-2 text-center">Please select a date to view events.</div>
                   </div>
                 </div>
-                <div class="mb-3">
-                  <label for="shiftMeetingLocation" class="form-label">Meeting Location</label>
+                <div class="mb-3 d-flex align-items-center">
+                  <label for="shiftMeetingLocation" class="form-label mb-0 me-3 text-nowrap">Meeting Location</label>
                   <input type="text" class="form-control" id="shiftMeetingLocation" required value="Warehouse">
                 </div>
-                <div class="mb-3">
-                  <label for="shiftStartTime" class="form-label">Start Time</label>
-                  <input type="time" class="form-control" id="shiftStartTime" required>
-                  <div class="text-danger small mt-1 d-none" id="shiftStartTimeError"></div>
+                <div class="mb-3 d-flex align-items-center">
+                  <label for="shiftStartTime" class="form-label mb-0 me-3 text-nowrap">Start Time</label>
+                  <div class="flex-grow-1">
+                    <input type="time" class="form-control" id="shiftStartTime" required>
+                    <div class="text-danger small mt-1 d-none" id="shiftStartTimeError"></div>
+                  </div>
                 </div>
                 <div class="mb-3">
-                  <label for="shiftLead" class="form-label">Select Lead</label>
-                  <select class="form-select" id="shiftLead">
-                    <option value="" selected>Loading leads...</option>
-                  </select>
+                  <div class="d-flex align-items-center mb-2">
+                    <label class="form-label mb-0 me-3 text-nowrap">Select Lead</label>
+                    <input type="text" class="form-control" id="shiftLeadSearch" placeholder="Search lead name">
+                  </div>
+                  <div class="border rounded p-2" id="shiftLeadContainer" style="max-height: 150px; overflow-y: auto;">
+                    <div class="text-muted small">Loading leads...</div>
+                  </div>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Select Staff</label>
+                  <div class="d-flex align-items-center mb-2">
+                    <label class="form-label mb-0 me-3 text-nowrap">Select Staff</label>
+                    <input type="text" class="form-control" id="shiftStaffSearch" placeholder="Search staff name">
+                  </div>
                   <div class="border rounded p-2" id="shiftStaffContainer" style="max-height: 150px; overflow-y: auto;">
                     <div class="text-muted small">Loading staff...</div>
                   </div>
@@ -212,7 +263,7 @@
                     <button class="btn btn-outline-secondary" type="button" id="addShiftNoteBtn">Add</button>
                   </div>
                   <ul class="list-group list-group-flush border rounded" id="shiftNotesList"
-                    style="max-height: 140px; overflow-y: auto;">
+                    style="max-height: 95px; overflow-y: auto;">
                     <li class="list-group-item text-muted small py-2 text-center">No notes added</li>
                   </ul>
                 </div>
@@ -238,52 +289,54 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <div class="mb-3">
-                <label for="editShiftDate" class="form-label">Date</label>
+              <div class="mb-3 d-flex align-items-center">
+                <label for="editShiftDate" class="form-label mb-0 me-3 text-nowrap">Date</label>
                 <input type="date" class="form-control" id="editShiftDate" disabled readonly>
               </div>
               <div class="mb-3">
-                <label for="editShiftEventName" class="form-label">Event Name</label>
-                <input type="text" class="form-control" id="editShiftEventName" disabled readonly>
+                <label class="form-label">Events & Types</label>
+                <div class="border rounded p-2 bg-light-subtle" id="editShiftEventContainer"
+                  style="max-height: 180px; overflow-y: auto;">
+                  <!-- Dynamic event rows will be injected here -->
+                </div>
               </div>
-              <div class="mb-3">
-                <label for="editShiftType" class="form-label">Type</label>
-                <select class="form-select" id="editShiftType" required>
-                  <option value="Delivery">Delivery</option>
-                  <option value="Pickup">Pickup</option>
-                  <option value="Delivery & Pickup">Delivery & Pickup</option>
-                  <option value="Full Staff Event">Full Staff Event</option>
-                  <option value="Runtime">Runtime</option>
-                  <option value="Setup">Setup</option>
-                  <option value="Runtime & Pickup">Runtime & Pickup</option>
-                </select>
-              </div>
-              <div class="mb-3">
-                <label for="editShiftMeetingLocation" class="form-label">Meeting Location</label>
+              <div class="mb-3 d-flex align-items-center">
+                <label for="editShiftMeetingLocation" class="form-label mb-0 me-3 text-nowrap">Meeting Location</label>
                 <input type="text" class="form-control" id="editShiftMeetingLocation" required>
               </div>
-              <div class="mb-3">
-                <label for="editShiftStartTime" class="form-label">Start Time</label>
-                <input type="time" class="form-control" id="editShiftStartTime" required>
-                <div class="text-danger small mt-1 d-none" id="editShiftStartTimeError"></div>
+              <div class="mb-3 d-flex align-items-center">
+                <label for="editShiftStartTime" class="form-label mb-0 me-3 text-nowrap">Start Time</label>
+                <div class="flex-grow-1">
+                  <input type="time" class="form-control" id="editShiftStartTime" required>
+                  <div class="text-danger small mt-1 d-none" id="editShiftStartTimeError"></div>
+                </div>
               </div>
               <div class="mb-3">
-                <label for="editShiftLead" class="form-label">Select Lead</label>
-                <select class="form-select" id="editShiftLead">
-                  <option value="" selected>Loading leads...</option>
-                </select>
+                <div class="d-flex align-items-center mb-2">
+                  <label class="form-label mb-0 me-3 text-nowrap">Select Lead</label>
+                  <input type="text" class="form-control" id="editShiftLeadSearch" placeholder="Search lead name">
+                </div>
+                <div class="border rounded p-2" id="editShiftLeadContainer"
+                  style="max-height: 150px; overflow-y: auto;">
+                  <div class="text-muted small">Loading leads...</div>
+                </div>
               </div>
               <div class="mb-3">
-                <label class="form-label">Select Staff</label>
-                <div class="border rounded p-2" id="editShiftStaffContainer" style="max-height: 150px; overflow-y: auto;">
+                <div class="d-flex align-items-center mb-2">
+                  <label class="form-label mb-0 me-3 text-nowrap">Select Staff</label>
+                  <input type="text" class="form-control" id="editShiftStaffSearch" placeholder="Search staff name">
+                </div>
+                <div class="border rounded p-2" id="editShiftStaffContainer"
+                  style="max-height: 150px; overflow-y: auto;">
                   <div class="text-muted small">Loading staff...</div>
                 </div>
               </div>
               <div class="mb-3">
                 <label for="editShiftStatus" class="form-label">Status</label>
                 <select class="form-select" id="editShiftStatus" required>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="unconfirmed">Un Confirmed</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
                 </select>
               </div>
               <div class="mb-3">
@@ -294,7 +347,7 @@
                   <button class="btn btn-outline-secondary" type="button" id="addEditShiftNoteBtn">Add</button>
                 </div>
                 <ul class="list-group list-group-flush border rounded" id="editShiftNotesList"
-                  style="max-height: 140px; overflow-y: auto;">
+                  style="max-height: 95px; overflow-y: auto;">
                   <li class="list-group-item text-muted small py-2 text-center">No notes added</li>
                 </ul>
               </div>
@@ -375,7 +428,7 @@
                 <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
                   <span>Recipients (<span id="pushRecipientsCount">0</span> users)</span>
                   <span class="badge bg-secondary-subtle text-secondary fw-normal small"
-                    id="pushUnconfirmedBadge">Status: Unconfirmed</span>
+                    id="pushUnconfirmedBadge">Status: Scheduled</span>
                 </label>
                 <div class="border rounded p-2 bg-light-subtle" id="pushRecipientsContainer"
                   style="max-height: 180px; overflow-y: auto;">

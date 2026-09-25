@@ -137,7 +137,6 @@
                       <th scope="col">Name</th>
                       <th scope="col">Contact Info</th>
                       <th scope="col">Role</th>
-                      <th scope="col">Status</th>
                       <th scope="col" class="text-end" id="actionColumnHeader">Action</th>
                     </tr>
                   </thead>
@@ -148,8 +147,17 @@
                   </tbody>
                 </table>
               </div>
+              <!-- Pagination controls -->
+              <div class="d-flex align-items-center justify-content-between p-3 border-top" id="paginationWrapper">
+                <div class="small text-muted" id="paginationInfo">
+                  Showing 0 of 0 users
+                </div>
+                <nav aria-label="Users pagination">
+                  <ul class="pagination pagination-sm mb-0 gap-1" id="paginationControls">
+                  </ul>
+                </nav>
+              </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -222,14 +230,6 @@
                 <div class="mb-3">
                   <label for="editUserRole" class="form-label">Role</label>
                   <select class="form-select" id="editUserRole" required>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="editUserStatus" class="form-label">Status</label>
-                  <select class="form-select" id="editUserStatus" required>
-                    <option value="onDuty">onDuty</option>
-                    <option value="offDuty">offDuty</option>
-                    <option value="Inactive">Inactive</option>
                   </select>
                 </div>
               </div>

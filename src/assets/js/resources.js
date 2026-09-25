@@ -1,6 +1,6 @@
 import * as bootstrap from 'bootstrap';
 import { db, storage } from './firebase-client.js';
-import { ref, listAll, getDownloadURL, getMetadata, uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { ref, listAll, getDownloadURL, getMetadata, uploadBytesResumable, uploadBytes, deleteObject, getBytes } from 'firebase/storage';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         videoModalInstance = new bootstrap.Modal(videoModalEl);
     }
     
+
     let currentFolder = 'Manuals'; // Default
     const userRoleId = localStorage.getItem('userRoleId');
     const isSpectator = userRoleId === '6' || userRoleId === 6;
@@ -164,9 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const itemRef of res.items) {
                 const tr = document.createElement('tr');
                 const actionContent = isSpectator ? `
-                    <a href="#" class="btn btn-sm btn-outline-primary view-btn" target="_blank" data-path="${itemRef.fullPath}">View</a>
+                    <a href="#" class="btn btn-sm btn-outline-primary view-btn" target="_blank" data-path="${itemRef.fullPath}"><i class="ti ti-eye"></i></a>
                 ` : `
-                    <a href="#" class="btn btn-sm btn-outline-primary view-btn me-1" target="_blank" data-path="${itemRef.fullPath}">View</a>
+                    <a href="#" class="btn btn-sm btn-outline-primary view-btn me-1" target="_blank" data-path="${itemRef.fullPath}"><i class="ti ti-eye"></i></a>
                     <button class="btn btn-sm btn-outline-danger delete-btn" data-type="file" data-path="${itemRef.fullPath}" data-name="${itemRef.name}"><i class="ti ti-trash"></i></button>
                 `;
                 tr.innerHTML = `

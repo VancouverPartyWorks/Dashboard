@@ -1,7 +1,8 @@
-import * as bootstrap from 'bootstrap';
-import { db, auth } from './firebase-client.js';
+import { Modal, Tab } from 'bootstrap';
+import { db, auth, storage } from './firebase-client.js';
 import { collection, onSnapshot, getDocs, query, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { ref, getDownloadURL, listAll } from 'firebase/storage';
 
 document.addEventListener('DOMContentLoaded', () => {
     const eventsTableBody = document.getElementById('eventsTableBody');
@@ -13,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const paginationControls = document.getElementById('paginationControls');
 
     let allShifts = [];
+    let supervisorReports = [];
+    let setupForms = [];
     let firebaseEvents = []; // Unique events extracted from Firebase
     let cachedApiLeads = [];
     let usersMap = new Map();
@@ -25,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSpectator = false;
 
     let currentPage = 1;
-    const pageSize = 15;
+    const pageSize = 10;
 
     // -------------------------------------------------------------
     // Auth Guard & Role Verification
@@ -146,6 +149,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 eventsTableBody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-danger">Error loading shifts from Firebase.</td></tr>`;
             }
         });
+
+        onSnapshot(collection(db, "supervisorReports"), (snapshot) => {
+            supervisorReports = [];
+            snapshot.forEach(docSnap => {
+                supervisorReports.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            buildFirebaseEvents();
+        }, (error) => {
+            console.error("Error loading supervisorReports:", error);
+        });
+
+        onSnapshot(collection(db, "forms"), (snapshot) => {
+            setupForms = [];
+            snapshot.forEach(docSnap => {
+                setupForms.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            buildFirebaseEvents();
+        }, (error) => {
+            console.error("Error loading setup forms:", error);
+        });
     }
 
     // -------------------------------------------------------------
@@ -226,9 +249,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 2. Setup Form submission
-                if (shift.setupFormSubmitted || shift.setupForm || shift.formData || shift.checklist) {
+                const shiftForm = setupForms.find(f => f.shiftId === shift.id);
+
+                if (shiftForm || shift.setupFormSubmitted || shift.setupForm || shift.formData || shift.checklist) {
                     ev.submissions.setupFormSubmitted = true;
-                    if (!ev.submissions.setupForm) {
+                    if (shiftForm) {
+                        ev.submissions.setupForm = shiftForm;
+                    } else if (!ev.submissions.setupForm) {
                         ev.submissions.setupForm = shift.setupForm || shift.formData || shift.checklist;
                     }
                     if (shift.assignedUserId) {
@@ -250,18 +277,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 4. Manager Report submission
-                if (shift.managerReportSubmitted || shift.managerReport || shift.report || shift.managerReportUrl || shift.reportNotes) {
+                const shiftReport = supervisorReports.find(r => r.shiftId === shift.id);
+
+                if (shiftReport || shift.managerReportSubmitted || shift.managerReport || shift.report || shift.managerReportUrl || shift.reportNotes) {
                     ev.submissions.managerReportSubmitted = true;
-                    if (!ev.submissions.managerReport) {
+                    if (shiftReport) {
+                        ev.submissions.managerReport = shiftReport;
+                    } else if (!ev.submissions.managerReport) {
                         ev.submissions.managerReport = shift.managerReport || shift.report || shift.reportNotes;
                     }
                     if (shift.managerReportUrl) {
                         ev.submissions.managerReportUrl = shift.managerReportUrl;
                     }
-                    if (shift.assignedUserId) {
+                    if (shiftReport && shiftReport.submittedBy) {
+                        ev.submissions.managerReportLeadId = shiftReport.submittedBy;
+                    } else if (shift.assignedUserId) {
                         ev.submissions.managerReportLeadId = shift.assignedUserId;
                     }
-                    if (shift.managerReportDate || shift.updatedAt) {
+                    if (shiftReport && (shiftReport.submittedAt || shiftReport.createdAt)) {
+                        ev.submissions.managerReportDate = shiftReport.submittedAt || shiftReport.createdAt;
+                    } else if (shift.managerReportDate || shift.updatedAt) {
                         ev.submissions.managerReportDate = shift.managerReportDate || shift.updatedAt;
                     }
                 }
@@ -439,10 +474,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<span class="badge bg-info-subtle text-info border small" title="Setup Form submitted"><i class="ti ti-forms me-0.5"></i>Form</span>`
                 : `<span class="badge bg-light text-muted border small" title="Setup Form pending"><i class="ti ti-forms me-0.5"></i>No Form</span>`;
 
-            const photosCount = sub.photos.length;
-            const photoBadge = (sub.setupPhotosSubmitted || photosCount > 0)
-                ? `<span class="badge bg-primary-subtle text-primary border small" title="${photosCount} Photos uploaded"><i class="ti ti-photo me-0.5"></i>${photosCount} Photo${photosCount !== 1 ? 's' : ''}</span>`
-                : `<span class="badge bg-light text-muted border small" title="Photos pending"><i class="ti ti-photo me-0.5"></i>0 Photos</span>`;
+            const photoBadgeId = `photo-badge-${ev.key.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            let photoBadge = '';
+            if (ev.submissions.photosFetched) {
+                const photosCount = ev.submissions.photos.length;
+                photoBadge = photosCount > 0
+                    ? `<span class="badge bg-primary-subtle text-primary border small" title="${photosCount} Photos uploaded" id="${photoBadgeId}"><i class="ti ti-photo me-0.5"></i>${photosCount} Photo${photosCount !== 1 ? 's' : ''}</span>`
+                    : `<span class="badge bg-light text-muted border small" title="Photos pending" id="${photoBadgeId}"><i class="ti ti-photo me-0.5"></i>0 Photos</span>`;
+            } else {
+                photoBadge = `<span class="badge bg-light text-muted border small" title="Loading photos..." id="${photoBadgeId}"><i class="ti ti-photo me-0.5"></i><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 0.75rem; height: 0.75rem;"></span></span>`;
+                
+                ev.submissions.photosFetched = true;
+                (async () => {
+                    const photoUrls = new Set([...ev.submissions.photos]);
+                    const promises = ev.shifts.map(async (shift) => {
+                        const shiftId = shift.id;
+                        if (!shiftId) return;
+                        try {
+                            const photosRef = ref(storage, `Shifts/${shiftId}/Photos`);
+                            const result = await listAll(photosRef);
+                            for (const itemRef of result.items) {
+                                try {
+                                    const url = await getDownloadURL(itemRef);
+                                    photoUrls.add(url);
+                                } catch (e) {}
+                            }
+                        } catch (err) {}
+                    });
+                    
+                    await Promise.all(promises);
+                    const finalPhotos = Array.from(photoUrls);
+                    ev.submissions.photos = finalPhotos;
+                    
+                    const badgeEl = document.getElementById(photoBadgeId);
+                    if (badgeEl) {
+                        const count = finalPhotos.length;
+                        if (count > 0) {
+                            badgeEl.className = 'badge bg-primary-subtle text-primary border small';
+                            badgeEl.title = `${count} Photos uploaded`;
+                            badgeEl.innerHTML = `<i class="ti ti-photo me-0.5"></i>${count} Photo${count !== 1 ? 's' : ''}`;
+                        } else {
+                            badgeEl.className = 'badge bg-light text-muted border small';
+                            badgeEl.title = 'Photos pending';
+                            badgeEl.innerHTML = `<i class="ti ti-photo me-0.5"></i>0 Photos`;
+                        }
+                    }
+                })();
+            }
 
             const reportBadge = sub.managerReportSubmitted
                 ? `<span class="badge border small" style="background: rgba(111,66,193,0.1); color: #6f42c1; border-color: rgba(111,66,193,0.2) !important;" title="Manager Report uploaded"><i class="ti ti-file-text me-0.5"></i>Report</span>`
@@ -483,13 +561,8 @@ document.addEventListener('DOMContentLoaded', () => {
             eventsTableBody.appendChild(tr);
         });
 
-        // Attach event listeners for View Event buttons
-        document.querySelectorAll('.view-event-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const key = btn.dataset.key;
-                openEventDetailsModal(key);
-            });
-        });
+        // We use event delegation on eventsTableBody instead
+        // of attaching listeners in a loop.
     }
 
     // -------------------------------------------------------------
@@ -546,18 +619,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Open Big Event Details Modal
     // -------------------------------------------------------------
     async function openEventDetailsModal(eventKey) {
-        const ev = firebaseEvents.find(e => e.key === eventKey);
-        if (!ev) return;
+        try {
+            const ev = firebaseEvents.find(e => e.key === eventKey);
+            if (!ev) {
+                console.error("Event not found for key:", eventKey);
+                return;
+            }
 
-        const modalEl = document.getElementById('viewEventModal');
-        if (!modalEl) return;
+            const modalEl = document.getElementById('viewEventModal');
+            if (!modalEl) {
+                console.error("Modal element viewEventModal not found");
+                return;
+            }
 
         // Reset to first tab: Lead Submissions & Forms
-        const submissionsTabBtn = document.getElementById('tab-submissions-btn');
-        if (submissionsTabBtn) {
-            const tabInstance = bootstrap.Tab.getOrCreateInstance(submissionsTabBtn);
-            tabInstance.show();
-        }
+            const submissionsTabBtn = document.getElementById('tab-submissions-btn');
+            if (submissionsTabBtn) {
+                const tabInstance = Tab.getOrCreateInstance(submissionsTabBtn);
+                tabInstance.show();
+            }
 
         const api = ev.apiLead || {};
         const sub = ev.submissions;
@@ -618,25 +698,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 sigBadgeEl.textContent = 'Submitted';
                 sigBadgeEl.className = 'badge bg-success-subtle text-success border';
             }
-            if (sigSigneeEl) sigSigneeEl.textContent = sub.clientSigneeName || api.cust ? `${api.cust.firstname || ''} ${api.cust.lastname || ''}`.trim() : 'Authorized Signee';
+            if (sigSigneeEl) sigSigneeEl.textContent = sub.clientSigneeName ? sub.clientSigneeName : (api.cust ? `${api.cust.firstname || ''} ${api.cust.lastname || ''}`.trim() : 'Authorized Signee');
             if (sigTimeEl) sigTimeEl.textContent = formatDateTimeDisplay(sub.clientSignatureDate) || 'Verified by Lead';
 
             if (sigImgContainer) {
-                const isImgUrl = typeof sub.clientSignature === 'string' && (sub.clientSignature.startsWith('http') || sub.clientSignature.startsWith('data:image'));
-                if (isImgUrl) {
-                    sigImgContainer.innerHTML = `
-                        <div class="text-center p-2">
-                            <img src="${escapeHtml(sub.clientSignature)}" alt="Client Signature" class="img-fluid rounded border bg-white p-2 shadow-xs" style="max-height: 140px;">
-                            <div class="small text-muted mt-1"><i class="ti ti-circle-check text-success me-1"></i>Client signature verified</div>
-                        </div>
-                    `;
+                sigImgContainer.innerHTML = '<span class="text-muted small">Loading signature...</span>';
+                
+                let userId = null;
+                if (sub.managerReportLeadId) {
+                    userId = sub.managerReportLeadId;
+                } else if (ev.assignedLeadIds && ev.assignedLeadIds.size > 0) {
+                    userId = Array.from(ev.assignedLeadIds)[0];
+                } else if (ev.shifts && ev.shifts.length > 0 && ev.shifts[0].assignedUserId) {
+                    userId = ev.shifts[0].assignedUserId;
+                }
+
+                const fallbackRender = () => {
+                    const isImgUrl = typeof sub.clientSignature === 'string' && (sub.clientSignature.startsWith('http') || sub.clientSignature.startsWith('data:image'));
+                    if (isImgUrl) {
+                        sigImgContainer.innerHTML = `
+                            <div class="text-center p-2">
+                                <img src="${escapeHtml(sub.clientSignature)}" alt="Client Signature" class="img-fluid rounded border bg-white p-2 shadow-xs" style="max-height: 140px;">
+                                <div class="small text-muted mt-1"><i class="ti ti-circle-check text-success me-1"></i>Client signature verified</div>
+                            </div>
+                        `;
+                    } else {
+                        sigImgContainer.innerHTML = `
+                            <div class="p-3 bg-success-subtle text-success rounded text-center border">
+                                <i class="ti ti-writing fs-3 d-block mb-1"></i>
+                                <strong>Signature Recorded</strong>: ${escapeHtml(String(sub.clientSignature))}
+                            </div>
+                        `;
+                    }
+                };
+
+                if (userId) {
+                    const sigRef = ref(storage, `Users/${userId}/signature.jpg`);
+                    getDownloadURL(sigRef).then(url => {
+                        sigImgContainer.innerHTML = `
+                            <div class="text-center p-2">
+                                <img src="${escapeHtml(url)}" alt="Client Signature" class="img-fluid rounded border bg-white p-2 shadow-xs" style="max-height: 140px;">
+                                <div class="small text-muted mt-1"><i class="ti ti-circle-check text-success me-1"></i>Client signature verified</div>
+                            </div>
+                        `;
+                    }).catch(err => {
+                        console.warn("Storage fetch failed, using fallback");
+                        fallbackRender();
+                    });
                 } else {
-                    sigImgContainer.innerHTML = `
-                        <div class="p-3 bg-success-subtle text-success rounded text-center border">
-                            <i class="ti ti-writing fs-3 d-block mb-1"></i>
-                            <strong>Signature Recorded</strong>: ${escapeHtml(String(sub.clientSignature))}
-                        </div>
-                    `;
+                    fallbackRender();
                 }
             }
         } else {
@@ -679,9 +789,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (reportContentBox) {
                 if (typeof sub.managerReport === 'object') {
-                    reportContentBox.textContent = JSON.stringify(sub.managerReport, null, 2);
+                    reportContentBox.innerHTML = generateManagerReportHTML(sub.managerReport);
                 } else {
-                    reportContentBox.textContent = sub.managerReport || 'Manager report submitted.';
+                    reportContentBox.innerHTML = `<div class="p-3 bg-light rounded text-muted">${sub.managerReport || 'Manager report submitted.'}</div>`;
                 }
             }
 
@@ -731,12 +841,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const photosBadgeEl = document.getElementById('photosStatusBadge');
         const photosContainer = document.getElementById('photosGalleryContainer');
 
-        if (photosBadgeEl) {
-            photosBadgeEl.textContent = `${sub.photos.length} Photo${sub.photos.length !== 1 ? 's' : ''}`;
-            photosBadgeEl.className = sub.photos.length > 0 ? 'badge bg-primary' : 'badge bg-secondary-subtle text-secondary border';
+        if (photosContainer) {
+            photosContainer.innerHTML = '<div class="col-12 text-center py-4"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted small">Loading photos from Storage...</div></div>';
         }
 
-        renderPhotosGallery(photosContainer, sub.photos);
+        if (photosBadgeEl) {
+            photosBadgeEl.textContent = 'Loading...';
+            photosBadgeEl.className = 'badge bg-secondary-subtle text-secondary border';
+        }
+
+        const photoUrls = new Set([...sub.photos]); // Start with predefined photos if any
+        
+        const fetchShiftPhotos = async () => {
+            const promises = ev.shifts.map(async (shift) => {
+                const shiftId = shift.id;
+                if (!shiftId) return;
+                
+                try {
+                    const photosRef = ref(storage, `Shifts/${shiftId}/Photos`);
+                    const result = await listAll(photosRef);
+                    for (const itemRef of result.items) {
+                        try {
+                            const url = await getDownloadURL(itemRef);
+                            photoUrls.add(url);
+                        } catch (e) {
+                            console.warn("Failed to get download URL for", itemRef.fullPath);
+                        }
+                    }
+                } catch (err) {
+                    // Normal if folder does not exist
+                }
+            });
+            
+            await Promise.all(promises);
+            const finalPhotos = Array.from(photoUrls);
+            
+            if (photosBadgeEl) {
+                photosBadgeEl.textContent = `${finalPhotos.length} Photo${finalPhotos.length !== 1 ? 's' : ''}`;
+                photosBadgeEl.className = finalPhotos.length > 0 ? 'badge bg-primary' : 'badge bg-secondary-subtle text-secondary border';
+            }
+            
+            renderPhotosGallery(photosContainer, finalPhotos);
+        };
+        
+        fetchShiftPhotos();
 
         // =========================================================
         // OTHER TABS (Schedule, Venue, Client, Rentals, Financials, Shifts, Notes)
@@ -841,15 +989,19 @@ document.addEventListener('DOMContentLoaded', () => {
         setText('notesAdditional1Box', api.additionalnotes1 || 'None');
         setText('notesAdditional2Box', api.additionalnotes2 || 'None');
 
-        // Show the Modal
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
+            // Show the Modal
+            const modal = Modal.getOrCreateInstance(modalEl);
+            modal.show();
 
-        // If API lead was not matched yet, search IO API by event name
-        if (!ev.apiLead) {
-            searchAndEnrichEvent(ev);
-        } else if (api.id) {
-            fetchFullLeadDetails(api.id);
+            // If API lead was not matched yet, search IO API by event name
+            if (!ev.apiLead) {
+                searchAndEnrichEvent(ev);
+            } else if (api.id) {
+                fetchFullLeadDetails(api.id);
+            }
+        } catch (error) {
+            console.error("Error inside openEventDetailsModal:", error);
+            alert("An error occurred opening the event details: " + error.message);
         }
     }
 
@@ -981,20 +1133,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Object with key-values
         let rows = '';
+        
+        // Skip unneeded metadata keys for display
+        const skipKeys = ['createdAt', 'updatedAt', 'formType', 'shiftId', 'id', 'submittedBy'];
+        
         for (const [key, val] of Object.entries(formData)) {
+            if (skipKeys.includes(key) || val === null) continue;
+            
             const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
             let valDisplay = val;
             if (typeof val === 'boolean') {
                 valDisplay = val ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>';
+            } else if (Array.isArray(val)) {
+                if (val.length === 0) {
+                    valDisplay = '<span class="text-muted small">None</span>';
+                } else if (key === 'inspectionItems' || key === 'inflatableGamesItems' || key === 'accessoriesItems') {
+                    let itemsHtml = '<ul class="list-group list-group-flush mb-0">';
+                    val.forEach((item, idx) => {
+                        const area = item.inspectedArea || `Item #${idx+1}`;
+                        const status = item.status || item.supervisorInitials || 'Done';
+                        let badgeClass = 'bg-success';
+                        if (status.toLowerCase() === 'no') badgeClass = 'bg-danger';
+                        else if (status.toLowerCase() === 'n/a' || status.toLowerCase() === 'na') badgeClass = 'bg-secondary';
+                        
+                        let itemContent = `
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <span class="small fw-semibold me-2">${escapeHtml(area)}</span>
+                                <span class="badge ${badgeClass}">${escapeHtml(status)}</span>
+                            </div>
+                        `;
+                        if (item.commentsActionTaken) {
+                            itemContent += `<div class="small text-muted mt-1 bg-light p-1 rounded border border-light-subtle"><strong>Notes:</strong> ${escapeHtml(item.commentsActionTaken)}</div>`;
+                        }
+                        itemsHtml += `<li class="list-group-item px-2 py-1">${itemContent}</li>`;
+                    });
+                    itemsHtml += '</ul>';
+                    valDisplay = itemsHtml;
+                } else {
+                    let itemsHtml = '<ul class="mb-0 ps-3 small">';
+                    val.forEach(item => {
+                        if (typeof item === 'object' && item !== null) {
+                            itemsHtml += `<li><pre class="mb-0">${escapeHtml(JSON.stringify(item))}</pre></li>`;
+                        } else {
+                            itemsHtml += `<li>${escapeHtml(String(item))}</li>`;
+                        }
+                    });
+                    itemsHtml += '</ul>';
+                    valDisplay = itemsHtml;
+                }
             } else if (typeof val === 'object' && val !== null) {
-                valDisplay = JSON.stringify(val);
+                // Formatting timestamps gracefully if they have seconds property
+                if (val.seconds) {
+                    valDisplay = formatDateTimeDisplay(val);
+                } else {
+                    valDisplay = JSON.stringify(val);
+                }
             } else {
                 valDisplay = escapeHtml(String(val));
             }
 
             rows += `
                 <tr>
-                    <td class="fw-semibold text-muted small py-2" style="width: 35%;">${escapeHtml(formattedKey)}</td>
+                    <td class="fw-semibold text-muted small py-2 align-middle" style="width: 30%;">${escapeHtml(formattedKey)}</td>
                     <td class="small py-2">${valDisplay}</td>
                 </tr>
             `;
@@ -1060,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imgEl.src = url;
         if (capEl) capEl.textContent = caption || '';
 
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const modal = Modal.getOrCreateInstance(modalEl);
         modal.show();
     }
 
@@ -1348,4 +1548,231 @@ document.addEventListener('DOMContentLoaded', () => {
             buildFirebaseEvents();
         });
     }
+
+    // Event delegation for view event buttons
+    if (eventsTableBody) {
+        eventsTableBody.addEventListener('click', (e) => {
+            const btn = e.target.closest('.view-event-btn');
+            if (btn) {
+                e.preventDefault();
+                const key = btn.getAttribute('data-key');
+                openEventDetailsModal(key);
+            }
+        });
+    }
 });
+
+
+
+function generateManagerReportHTML(report) {
+    if (!report) return '<div class="text-muted">No report data found.</div>';
+    
+    return `
+    <div class="report-container" style="font-size: 0.9rem;">
+        <!-- Header -->
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-primary fw-bold"><i class="ti ti-clipboard-check me-2"></i>Supervisor Report</h5>
+                    <span class="badge bg-primary-subtle text-primary border">${report.shiftId || 'No Shift ID'}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operations Checklist -->
+        <h6 class="fw-bold text-dark mb-3"><i class="ti ti-list-check me-2"></i>Operations Checklist</h6>
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card h-100 border bg-light-subtle shadow-sm">
+                    <div class="card-body p-3">
+                        <div class="fw-bold text-dark mb-2">1. Event Arrival</div>
+                        <div class="mb-1"><span class="text-muted">Status:</span> 
+                            <span class="badge ${report.eventArrivalStatus === 'on time' ? 'bg-success' : 'bg-danger'}">${report.eventArrivalStatus || 'N/A'}</span>
+                        </div>
+                        ${report.eventArrivalStatus === 'late' ? `
+                        <div class="mb-1"><span class="text-muted">Time:</span> ${report.eventArrivalLateTime || '-'}</div>
+                        <div class="small"><span class="text-muted">Reason:</span> ${report.eventArrivalLateReason || '-'}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 border bg-light-subtle shadow-sm">
+                    <div class="card-body p-3">
+                        <div class="fw-bold text-dark mb-2">2. Setup Completion</div>
+                        <div class="mb-1"><span class="text-muted">Status:</span> 
+                            <span class="badge ${report.setupCompletionStatus === 'on time' ? 'bg-success' : 'bg-danger'}">${report.setupCompletionStatus || 'N/A'}</span>
+                        </div>
+                        ${report.setupCompletionStatus === 'late' ? `
+                        <div class="mb-1"><span class="text-muted">Time:</span> ${report.setupCompletionLateTime || '-'}</div>
+                        <div class="small"><span class="text-muted">Reason:</span> ${report.setupCompletionLateReason || '-'}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 border bg-light-subtle shadow-sm">
+                    <div class="card-body p-3">
+                        <div class="fw-bold text-dark mb-2">3. Strike Down</div>
+                        <div class="mb-1"><span class="text-muted">Status:</span> 
+                            <span class="badge ${report.strikeDownStatus === 'on time' ? 'bg-success' : 'bg-danger'}">${report.strikeDownStatus || 'N/A'}</span>
+                        </div>
+                        ${report.strikeDownStatus === 'late' ? `
+                        <div class="mb-1"><span class="text-muted">Time:</span> ${report.strikeDownLateTime || '-'}</div>
+                        <div class="small"><span class="text-muted">Reason:</span> ${report.strikeDownLateReason || '-'}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Status -->
+        <h6 class="fw-bold text-dark mb-3"><i class="ti ti-tool me-2"></i>Equipment Status</h6>
+        <div class="card border mb-4 shadow-sm">
+            <div class="card-body p-3">
+                <div class="row g-3">
+                    <div class="col-md-6 border-end">
+                        <div class="fw-bold text-dark mb-2">4. Equipment BEFORE Event</div>
+                        <div class="mb-2"><span class="text-muted">Condition:</span> 
+                            <span class="badge ${report.equipmentBeforeEventStatus === 'Clean' ? 'bg-success' : 'bg-warning text-dark'}">${report.equipmentBeforeEventStatus || 'N/A'}</span>
+                        </div>
+                        ${report.equipmentBeforeEventStatus !== 'Clean' ? `
+                        <div class="small"><span class="text-muted">Notes:</span> ${report.equipmentBeforeEventNotes || 'None'}</div>
+                        ` : ''}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fw-bold text-dark mb-2">5. Equipment AFTER Event</div>
+                        <div class="mb-2"><span class="text-muted">Condition:</span> 
+                            <span class="badge ${report.equipmentAfterEventStatus === 'Clean' ? 'bg-success' : 'bg-warning text-dark'}">${report.equipmentAfterEventStatus || 'N/A'}</span>
+                        </div>
+                        ${report.equipmentAfterEventStatus !== 'Clean' ? `
+                        <div class="small"><span class="text-muted">Notes:</span> ${report.equipmentAfterEventNotes || 'None'}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Failure & Food -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card h-100 border shadow-sm ${report.equipmentStoppedWorking ? 'border-danger' : ''}">
+                    <div class="card-header bg-light border-bottom py-2 fw-bold text-dark">
+                        6. Equipment Failure
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-2">
+                            <span class="text-muted">Did equipment stop working?</span> 
+                            <span class="badge ${report.equipmentStoppedWorking ? 'bg-danger' : 'bg-success'}">${report.equipmentStoppedWorking ? 'Yes' : 'No'}</span>
+                        </div>
+                        ${report.equipmentStoppedWorking ? `
+                        <div class="small mb-1"><span class="fw-semibold">Equipment:</span> ${report.equipmentStoppedWorkingDetails || '-'}</div>
+                        <div class="small mb-1"><span class="fw-semibold">Time:</span> ${report.equipmentStoppedWorkingTime || '-'}</div>
+                        <div class="small mb-1"><span class="fw-semibold">Reason:</span> ${report.equipmentStoppedWorkingReason || '-'}</div>
+                        <div class="small"><span class="fw-semibold">Actions:</span> ${report.equipmentStoppedWorkingActions || '-'}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card h-100 border shadow-sm">
+                    <div class="card-header bg-light border-bottom py-2 fw-bold text-dark">
+                        7. Food Product & Staff
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-3">
+                            <div class="mb-1">
+                                <span class="text-muted">Un-opened food returned?</span> 
+                                <span class="badge ${report.unopenedFoodReturned ? 'bg-warning text-dark' : 'bg-secondary'}">${report.unopenedFoodReturned ? 'Yes' : 'No'}</span>
+                            </div>
+                            ${report.unopenedFoodReturned ? `
+                            <div class="small text-muted fst-italic">${report.unopenedFoodReturnedDetails || 'No details provided'}</div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="pt-2 border-top">
+                            <div class="mb-1">
+                                <span class="text-muted">Issues with staff?</span> 
+                                <span class="badge ${report.staffIssues ? 'bg-danger' : 'bg-success'}">${report.staffIssues ? 'Yes' : 'No'}</span>
+                            </div>
+                            ${report.staffIssues ? `
+                            <div class="small text-danger fst-italic">${report.staffIssuesComments || 'No details provided'}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Injuries -->
+        <h6 class="fw-bold text-dark mb-3"><i class="ti ti-alert-triangle me-2"></i>Incident & Injuries</h6>
+        <div class="card border mb-4 shadow-sm ${(report.hasCustomerInjury || report.hasStaffInjury) ? 'border-danger bg-danger-subtle' : ''}">
+            <div class="card-body p-3">
+                <div class="d-flex gap-4 mb-3">
+                    <div>
+                        <span class="text-muted">Customer Injury:</span> 
+                        <span class="badge ${report.hasCustomerInjury ? 'bg-danger' : 'bg-success'}">${report.hasCustomerInjury ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div>
+                        <span class="text-muted">Staff Injury:</span> 
+                        <span class="badge ${report.hasStaffInjury ? 'bg-danger' : 'bg-success'}">${report.hasStaffInjury ? 'Yes' : 'No'}</span>
+                    </div>
+                </div>
+                
+                ${(report.hasCustomerInjury || report.hasStaffInjury) ? `
+                <div class="border-top border-danger pt-3 mt-2">
+                    <h6 class="text-danger fw-bold mb-3"><i class="ti ti-medical-cross me-1"></i> Accident Report Form</h6>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="small"><span class="text-muted fw-semibold">Injured Party:</span> ${report.injuredPartyName || '-'}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small"><span class="text-muted fw-semibold">Time:</span> ${report.timeOfInjury || '-'}</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="small"><span class="text-muted fw-semibold">Nature of Injury:</span> ${report.natureOfInjury || '-'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="small text-muted fw-semibold mb-1">Accident Description:</div>
+                        <div class="p-2 bg-white rounded border border-danger-subtle small">${report.accidentDescription || 'No description provided'}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="small text-muted fw-semibold mb-1">Resolution (First Aid etc.):</div>
+                        <div class="p-2 bg-white rounded border border-danger-subtle small">${report.accidentResolution || 'No resolution provided'}</div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-2 bg-white rounded border border-danger-subtle h-100">
+                                <div class="small fw-bold text-dark mb-2 border-bottom pb-1">Lead Signature</div>
+                                <div class="small mb-1"><span class="text-muted">Name:</span> ${report.accidentLeadName || '-'}</div>
+                                <div class="small mb-1"><span class="text-muted">Phone:</span> ${report.accidentLeadPhone || '-'}</div>
+                                <div class="small mb-1"><span class="text-muted">Signature:</span> <span class="fst-italic">${report.accidentLeadSignature || '-'}</span></div>
+                                <div class="small"><span class="text-muted">Date:</span> ${report.accidentLeadDate || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 bg-white rounded border border-danger-subtle h-100">
+                                <div class="small fw-bold text-dark mb-2 border-bottom pb-1">Witness Signature</div>
+                                <div class="small mb-1"><span class="text-muted">Name:</span> ${report.accidentWitnessName || '-'}</div>
+                                <div class="small mb-1"><span class="text-muted">Phone:</span> ${report.accidentWitnessPhone || '-'}</div>
+                                <div class="small mb-1"><span class="text-muted">Signature:</span> <span class="fst-italic">${report.accidentWitnessSignature || '-'}</span></div>
+                                <div class="small"><span class="text-muted">Date:</span> ${report.accidentWitnessDate || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+        
+    </div>
+    `;
+}

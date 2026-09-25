@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let usersMap = new Map();
   let pendingFetchSet = new Set();
   let currentPage = 1;
-  const RECORDS_PER_PAGE = 20;
+  const RECORDS_PER_PAGE = 10;
 
   // Column order state (first two swappable columns: 'name' and 'date')
   let columnOrder = ['name', 'date'];
@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterStartDate = document.getElementById('filterStartDate');
   const filterEndDate = document.getElementById('filterEndDate');
   const filterEmployee = document.getElementById('filterEmployee');
+  const searchEmployee = document.getElementById('searchEmployee');
   const sortField = document.getElementById('sortField');
   const sortOrder = document.getElementById('sortOrder');
   const resetFiltersBtn = document.getElementById('resetFiltersBtn');
@@ -169,9 +170,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const addedUserIds = new Set();
 
-      // Process staff members if present
-      if (Array.isArray(shift.staffMembers) && shift.staffMembers.length > 0) {
-        shift.staffMembers.forEach((staffObj, idx) => {
+      // Combine staffMembers and members arrays/objects
+      let staffList = [];
+      
+      if (shift.staffMembers) {
+         if (Array.isArray(shift.staffMembers)) {
+           shift.staffMembers.forEach((s, i) => staffList.push({ key: i, obj: s, field: 'staffMembers' }));
+         } else if (typeof shift.staffMembers === 'object') {
+           Object.keys(shift.staffMembers).forEach(k => staffList.push({ key: k, obj: shift.staffMembers[k], field: 'staffMembers' }));
+         }
+      }
+      
+      if (shift.members) {
+         if (Array.isArray(shift.members)) {
+           shift.members.forEach((s, i) => staffList.push({ key: i, obj: s, field: 'members' }));
+         } else if (typeof shift.members === 'object') {
+           Object.keys(shift.members).forEach(k => staffList.push({ key: k, obj: shift.members[k], field: 'members' }));
+         }
+      }
+
+      if (staffList.length > 0) {
+        staffList.forEach((item) => {
+          const staffObj = item.obj;
+          const idx = item.key;
+          const staffField = item.field;
+          
           if (!staffObj) return;
           const staffId = typeof staffObj === 'string' ? staffObj : (staffObj.id || staffObj.uid || `staff_${idx}`);
           if (staffId && typeof staffObj === 'object') {
@@ -231,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             id: `${shiftId}_staff_${idx}`,
             realDocId: shiftId,
             staffIndex: idx,
+            staffField: staffField,
             sourceCollection: 'shifts',
             employeeId: staffId,
             employeeName: staffName,
@@ -352,12 +376,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const startDateVal = filterStartDate.value;
     const endDateVal = filterEndDate.value;
     const empVal = filterEmployee.value;
+    const searchVal = searchEmployee ? searchEmployee.value.toLowerCase().trim() : '';
     const fieldVal = sortField ? sortField.value : currentSortField;
     const orderVal = sortOrder ? sortOrder.value : currentSortOrder;
 
     // Filter
     filteredLogs = allTimesheetLogs.filter(log => {
       if (empVal && log.employeeName !== empVal) {
+        return false;
+      }
+      if (searchVal && log.employeeName && !log.employeeName.toLowerCase().includes(searchVal)) {
         return false;
       }
       if (startDateVal && log.date < startDateVal) {
@@ -669,10 +697,23 @@ document.addEventListener('DOMContentLoaded', () => {
             updatedAt: serverTimestamp()
           };
 
-          let staffMembers = shiftData.staffMembers;
-          if (Array.isArray(staffMembers) && log.staffIndex >= 0 && staffMembers[log.staffIndex]) {
-            const targetStaff = staffMembers[log.staffIndex];
-            if (typeof targetStaff === 'object') {
+          let staffField = log.staffField || 'staffMembers';
+          let staffMembers = shiftData[staffField];
+          
+          if (staffMembers) {
+            let targetStaff = null;
+            if (Array.isArray(staffMembers) && log.staffIndex !== undefined && staffMembers[log.staffIndex]) {
+              targetStaff = staffMembers[log.staffIndex];
+            } else if (typeof staffMembers === 'object' && log.staffIndex !== undefined && staffMembers[log.staffIndex]) {
+              targetStaff = staffMembers[log.staffIndex];
+            } else if (Array.isArray(staffMembers)) {
+              targetStaff = staffMembers.find(s => s && typeof s === 'object' && (s.id === log.employeeId || s.uid === log.employeeId));
+            } else if (typeof staffMembers === 'object') {
+              let key = Object.keys(staffMembers).find(k => staffMembers[k] && typeof staffMembers[k] === 'object' && (staffMembers[k].id === log.employeeId || staffMembers[k].uid === log.employeeId));
+              if (key) targetStaff = staffMembers[key];
+            }
+
+            if (targetStaff && typeof targetStaff === 'object') {
               targetStaff.clockInTime = Timestamp.fromDate(inDate);
               targetStaff.clockOutTime = Timestamp.fromDate(outDate);
               targetStaff.totalHours = totalHrs;
@@ -681,24 +722,11 @@ document.addEventListener('DOMContentLoaded', () => {
               targetStaff.earlyClockIn = false;
               targetStaff.lateClockIn = false;
               targetStaff.outsideGeoFence = false;
-            }
-            updateData.staffMembers = staffMembers;
-          } else if (Array.isArray(staffMembers)) {
-            const foundStaff = staffMembers.find(s => s && typeof s === 'object' && (s.id === log.employeeId || s.uid === log.employeeId));
-            if (foundStaff) {
-              foundStaff.clockInTime = Timestamp.fromDate(inDate);
-              foundStaff.clockOutTime = Timestamp.fromDate(outDate);
-              foundStaff.totalHours = totalHrs;
-              foundStaff.status = 'approved';
-              foundStaff.flag = 'Approved';
-              foundStaff.earlyClockIn = false;
-              foundStaff.lateClockIn = false;
-              foundStaff.outsideGeoFence = false;
-              updateData.staffMembers = staffMembers;
+              updateData[staffField] = staffMembers;
             }
           }
 
-          if (shiftData.assignedUserId === log.employeeId || !Array.isArray(staffMembers)) {
+          if (shiftData.assignedUserId === log.employeeId || !staffMembers) {
             updateData.clockInTime = Timestamp.fromDate(inDate);
             updateData.clockOutTime = Timestamp.fromDate(outDate);
             updateData.totalHours = totalHrs;
@@ -737,30 +765,33 @@ document.addEventListener('DOMContentLoaded', () => {
             updatedAt: serverTimestamp()
           };
 
-          let staffMembers = shiftData.staffMembers;
-          if (Array.isArray(staffMembers) && log.staffIndex >= 0 && staffMembers[log.staffIndex]) {
-            const targetStaff = staffMembers[log.staffIndex];
-            if (typeof targetStaff === 'object') {
+          let staffField = log.staffField || 'staffMembers';
+          let staffMembers = shiftData[staffField];
+          
+          if (staffMembers) {
+            let targetStaff = null;
+            if (Array.isArray(staffMembers) && log.staffIndex !== undefined && staffMembers[log.staffIndex]) {
+              targetStaff = staffMembers[log.staffIndex];
+            } else if (typeof staffMembers === 'object' && log.staffIndex !== undefined && staffMembers[log.staffIndex]) {
+              targetStaff = staffMembers[log.staffIndex];
+            } else if (Array.isArray(staffMembers)) {
+              targetStaff = staffMembers.find(s => s && typeof s === 'object' && (s.id === log.employeeId || s.uid === log.employeeId));
+            } else if (typeof staffMembers === 'object') {
+              let key = Object.keys(staffMembers).find(k => staffMembers[k] && typeof staffMembers[k] === 'object' && (staffMembers[k].id === log.employeeId || staffMembers[k].uid === log.employeeId));
+              if (key) targetStaff = staffMembers[key];
+            }
+
+            if (targetStaff && typeof targetStaff === 'object') {
               targetStaff.status = 'approved';
               targetStaff.flag = 'Approved';
               targetStaff.earlyClockIn = false;
               targetStaff.lateClockIn = false;
               targetStaff.outsideGeoFence = false;
-            }
-            updateData.staffMembers = staffMembers;
-          } else if (Array.isArray(staffMembers)) {
-            const foundStaff = staffMembers.find(s => s && typeof s === 'object' && (s.id === log.employeeId || s.uid === log.employeeId));
-            if (foundStaff) {
-              foundStaff.status = 'approved';
-              foundStaff.flag = 'Approved';
-              foundStaff.earlyClockIn = false;
-              foundStaff.lateClockIn = false;
-              foundStaff.outsideGeoFence = false;
-              updateData.staffMembers = staffMembers;
+              updateData[staffField] = staffMembers;
             }
           }
 
-          if (shiftData.assignedUserId === log.employeeId || !Array.isArray(staffMembers)) {
+          if (shiftData.assignedUserId === log.employeeId || !staffMembers) {
             updateData.flag = "Approved";
             updateData.outsideGeoFence = false;
             updateData.earlyClockIn = false;
@@ -837,6 +868,9 @@ document.addEventListener('DOMContentLoaded', () => {
   filterStartDate.addEventListener('change', applyFiltersAndSorting);
   filterEndDate.addEventListener('change', applyFiltersAndSorting);
   filterEmployee.addEventListener('change', applyFiltersAndSorting);
+  if (searchEmployee) {
+    searchEmployee.addEventListener('input', applyFiltersAndSorting);
+  }
   if (sortField) sortField.addEventListener('change', applyFiltersAndSorting);
   if (sortOrder) sortOrder.addEventListener('change', applyFiltersAndSorting);
 
@@ -965,6 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
     filterStartDate.value = '';
     filterEndDate.value = '';
     filterEmployee.value = '';
+    if (searchEmployee) searchEmployee.value = '';
     currentSortField = 'name';
     currentSortOrder = 'asc';
     if (sortField) sortField.value = 'name';
@@ -978,7 +1013,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ts) return null;
     if (typeof ts.toDate === 'function') return ts.toDate();
     if (ts.seconds !== undefined) return new Date(ts.seconds * 1000);
-    if (typeof ts === 'string' || typeof ts === 'number') {
+    if (typeof ts === 'string') {
+      let cleanTs = ts.replace(" at ", " ");
+      let d = new Date(cleanTs);
+      if (!isNaN(d.getTime())) return d;
+      
+      let noTz = cleanTs.replace(/UTC[+-]\d+/, '').trim();
+      d = new Date(noTz);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (typeof ts === 'number') {
       const d = new Date(ts);
       if (!isNaN(d.getTime())) return d;
     }

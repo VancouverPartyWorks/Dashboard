@@ -1,5 +1,5 @@
 import { db } from './firebase-client.js';
-import { collection, getCountFromServer } from 'firebase/firestore';
+import { collection, getCountFromServer, getDocs } from 'firebase/firestore';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const totalUsersStat = document.getElementById('totalUsersStat');
@@ -61,21 +61,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // Fetch Total Events
+        // Fetch Total Events based on shifts
         const totalEventsStat = document.getElementById('totalEventsStat');
         if (totalEventsStat) {
-            const apiKey = import.meta.env.VITE_IO_API_KEY;
-            if (apiKey) {
-                const res = await fetch(`/io-api/leads/?apiKey=${apiKey}&limit=250`);
-                if (res.ok) {
-                    const data = await res.json();
-                    let leads = [];
-                    if (Array.isArray(data)) leads = data;
-                    else if (data.items && Array.isArray(data.items)) leads = data.items;
-                    else if (data.data && Array.isArray(data.data)) leads = data.data;
-                    totalEventsStat.textContent = leads.length;
+            const shiftsSnap = await getDocs(collection(db, "shifts"));
+            const eventsMap = new Map();
+
+            shiftsSnap.forEach(docSnap => {
+                const shift = { id: docSnap.id, ...docSnap.data() };
+                let eventNames = [];
+                if (Array.isArray(shift.eventsList) && shift.eventsList.length > 0) {
+                    eventNames = shift.eventsList.map(s => String(s).trim()).filter(Boolean);
+                } else if (typeof shift.venueName === 'string' && shift.venueName.trim() && shift.venueName.trim().toLowerCase() !== 'no event selected') {
+                    eventNames = shift.venueName.split(',').map(s => s.trim()).filter(Boolean);
+                } else if (shift.eventName) {
+                    eventNames = [String(shift.eventName).trim()];
                 }
-            }
+
+                if (eventNames.length === 0) {
+                    if (shift.venueName && shift.venueName.trim()) {
+                        eventNames = [shift.venueName.trim()];
+                    } else {
+                        eventNames = [`Shift #${shift.id.slice(0, 6)} Event`];
+                    }
+                }
+
+                eventNames.forEach(name => {
+                    eventsMap.set(name.toLowerCase(), true);
+                });
+            });
+
+            totalEventsStat.textContent = eventsMap.size;
         }
     } catch (e) {
         console.error("Error fetching total events:", e);

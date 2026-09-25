@@ -88,13 +88,19 @@
       </a>
     </div>
     <ul class="nav flex-column">
-      <li><a class="nav-link" href="index.html"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a></li>
+      <li><a class="nav-link" href="index.html"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a>
+      </li>
       <li><a class="nav-link" href="users.html"><i class="ti ti-users"></i><span class="nav-text">Users</span></a></li>
-      <li id="shiftsNavItem"><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span class="nav-text">Shifts</span></a></li>
-      <li id="eventsNavItem"><a class="nav-link active" href="events.html"><i class="ti ti-calendar"></i><span class="nav-text">Events</span></a></li>
-      <li class="d-none" id="timesheetNavItem"><a class="nav-link" href="timesheet.html"><i class="ti ti-clock"></i><span class="nav-text">Timesheet</span></a></li>
-      <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i class="ti ti-video"></i><span class="nav-text">Resources</span></a></li>
-      <li class="d-none" id="receiptsNavItem"><a class="nav-link" href="receipts.html"><i class="ti ti-receipt"></i><span class="nav-text">Receipts</span></a></li>
+      <li id="shiftsNavItem"><a class="nav-link" href="shifts.html"><i class="ti ti-calendar-event"></i><span
+            class="nav-text">Shifts</span></a></li>
+      <li id="eventsNavItem"><a class="nav-link active" href="events.html"><i class="ti ti-calendar"></i><span
+            class="nav-text">Events</span></a></li>
+      <li class="d-none" id="timesheetNavItem"><a class="nav-link" href="timesheet.html"><i
+            class="ti ti-clock"></i><span class="nav-text">Timesheet</span></a></li>
+      <li class="d-none" style="display: none;" id="resourcesNavItem"><a class="nav-link" href="resources.html"><i
+            class="ti ti-video"></i><span class="nav-text">Resources</span></a></li>
+      <li class="d-none" id="receiptsNavItem"><a class="nav-link" href="receipts.html"><i
+            class="ti ti-receipt"></i><span class="nav-text">Receipts</span></a></li>
     </ul>
   </aside>
 
@@ -107,10 +113,12 @@
           <div class="mb-6 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
               <h1 class="fs-3 mb-1">Events</h1>
-              <p id="pageSubtitle" class="text-muted mb-0">Events from Firebase Database with Full Details & Lead Submissions</p>
+              <p id="pageSubtitle" class="text-muted mb-0">Events from Firebase Database with Full Details & Lead
+                Submissions</p>
             </div>
             <div class="d-flex align-items-center gap-2">
-              <button id="refreshEventsBtn" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+              <button id="refreshEventsBtn"
+                class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                 <i class="ti ti-refresh fs-5"></i>
                 <span>Refresh</span>
               </button>
@@ -124,16 +132,18 @@
         <div class="col-12">
           <div class="card shadow-sm border">
             <!-- Card Header -->
-            <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center px-4 py-3 gap-3 border-bottom">
+            <div
+              class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center px-4 py-3 gap-3 border-bottom">
               <div class="d-flex align-items-center gap-2">
-                <h4 class="mb-0 h5" id="tableTitle">Database Events</h4>
+                <h4 class="mb-0 h5" id="tableTitle">Events</h4>
                 <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1" id="eventsCountBadge">0</span>
               </div>
-              <div class="d-flex flex-wrap align-items-center gap-2">
+              <div class="d-flex align-items-center gap-2">
                 <!-- Search Input -->
-                <div class="input-group input-group-sm" style="min-width: 260px; max-width: 340px;">
+                <div class="input-group input-group-sm" style="width: 280px;">
                   <span class="input-group-text bg-light border-end-0"><i class="ti ti-search text-muted"></i></span>
-                  <input type="text" id="searchEventInput" class="form-control border-start-0" placeholder="Search event, venue, lead...">
+                  <input type="text" id="searchEventInput" class="form-control border-start-0"
+                    placeholder="Search event, venue, lead...">
                 </div>
                 <!-- Filter Dropdown -->
                 <select id="eventFilterSelect" class="form-select form-select-sm" style="width: auto;">
@@ -170,7 +180,9 @@
             </div>
 
             <!-- Card Footer / Pagination -->
-            <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 border-top gap-2" id="paginationWrapper">
+            <div
+              class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-between align-items-center px-4 py-3 border-top gap-2"
+              id="paginationWrapper">
               <div class="small text-muted" id="paginationInfo">
                 Showing 0 to 0 of 0 events
               </div>
@@ -201,20 +213,24 @@
   <div class="modal fade" id="viewEventModal" tabindex="-1" aria-labelledby="viewEventModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow-lg">
-        
+
         <!-- Modal Header -->
         <div class="modal-header bg-light border-bottom px-4 py-3 align-items-center">
           <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 flex-grow-1">
             <div class="d-flex align-items-center gap-2">
-              <span class="icon-shape icon-sm rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+              <span
+                class="icon-shape icon-sm rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center"
+                style="width: 32px; height: 32px;">
                 <i class="ti ti-calendar-event fs-5"></i>
               </span>
               <h4 class="modal-title h5 mb-0 fw-bold text-dark" id="modalEventName">Event Details</h4>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2 ms-md-3">
-              <span class="badge bg-secondary-subtle text-secondary border fw-medium" id="modalEventIdBadge">Lead #0</span>
+              <span class="badge bg-secondary-subtle text-secondary border fw-medium" id="modalEventIdBadge">Lead
+                #0</span>
               <span class="badge bg-primary-subtle text-primary border fw-medium" id="modalStatusBadge">Status</span>
-              <span class="badge bg-info-subtle text-info border fw-medium" id="modalDeliveryTypeBadge">Delivery Type</span>
+              <span class="badge bg-info-subtle text-info border fw-medium" id="modalDeliveryTypeBadge">Delivery
+                Type</span>
               <span class="badge bg-success-subtle text-success border fw-medium" id="modalDateBadge">Date</span>
             </div>
           </div>
@@ -223,28 +239,33 @@
 
         <!-- Modal Body -->
         <div class="modal-body p-0">
-          
+
           <!-- Summary Quick Metrics Banner -->
           <div class="bg-light-subtle border-bottom px-4 py-3">
             <div class="row g-3 text-center text-sm-start">
               <div class="col-6 col-md-3 border-end-md">
-                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Event Date & Time</div>
+                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Event Date & Time
+                </div>
                 <div class="fw-bold text-dark mt-1" id="summaryEventDateTime">—</div>
                 <div class="small text-muted" id="summaryEventDuration">—</div>
               </div>
               <div class="col-6 col-md-3 border-end-md">
-                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Venue & Location</div>
+                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Venue & Location
+                </div>
                 <div class="fw-bold text-dark mt-1 text-truncate" id="summaryVenueName">—</div>
                 <div class="small text-muted text-truncate" id="summaryVenueCity">—</div>
               </div>
               <div class="col-6 col-md-3 border-end-md">
-                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Lead Submissions</div>
-                <div class="d-flex flex-wrap gap-1 mt-1 justify-content-center justify-content-sm-start" id="summarySubmissionsBadges">
+                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Lead Submissions
+                </div>
+                <div class="d-flex flex-wrap gap-1 mt-1 justify-content-center justify-content-sm-start"
+                  id="summarySubmissionsBadges">
                   <!-- Badges populated dynamically -->
                 </div>
               </div>
-              <div class="col-6 col-md-3">
-                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Financial Balance</div>
+              <div class="col-6 col-md-3 d-none">
+                <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Financial Balance
+                </div>
                 <div class="fw-bold text-primary mt-1" id="summaryTotalAmount">$0.00</div>
                 <div class="small fw-semibold" id="summaryBalanceDue">Due: $0.00</div>
               </div>
@@ -253,52 +274,65 @@
 
           <!-- Nav Tabs -->
           <div class="px-4 pt-2 border-bottom bg-white">
-            <ul class="nav nav-tabs border-bottom-0 gap-1 flex-nowrap overflow-x-auto" id="eventDetailTabs" role="tablist">
+            <ul class="nav nav-tabs border-bottom-0 gap-1 flex-nowrap overflow-x-auto" id="eventDetailTabs"
+              role="tablist">
               <!-- TAB 1: LEAD SUBMISSIONS (PRIMARY) -->
               <li class="nav-item" role="presentation">
-                <button class="nav-link active py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-submissions-btn" data-bs-toggle="tab" data-bs-target="#tab-submissions" type="button" role="tab">
+                <button class="nav-link active py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-submissions-btn" data-bs-toggle="tab" data-bs-target="#tab-submissions" type="button"
+                  role="tab">
                   <i class="ti ti-checklist text-primary"></i> Lead Submissions & Forms
                 </button>
               </li>
               <!-- TAB 2: SCHEDULE & LOGISTICS -->
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-overview-btn" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button" role="tab">
+              <li class="nav-item d-none" role="presentation">
+                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-overview-btn" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button" role="tab">
                   <i class="ti ti-calendar-time"></i> Schedule & Logistics
                 </button>
               </li>
               <!-- TAB 3: VENUE & LOCATION -->
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-venue-btn" data-bs-toggle="tab" data-bs-target="#tab-venue" type="button" role="tab">
+              <li class="nav-item d-none" role="presentation">
+                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-venue-btn" data-bs-toggle="tab" data-bs-target="#tab-venue" type="button" role="tab">
                   <i class="ti ti-map-pin"></i> Venue & Location
                 </button>
               </li>
               <!-- TAB 4: CUSTOMER & CONTACT -->
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-client-btn" data-bs-toggle="tab" data-bs-target="#tab-client" type="button" role="tab">
+              <li class="nav-item d-none" role="presentation">
+                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-client-btn" data-bs-toggle="tab" data-bs-target="#tab-client" type="button" role="tab">
                   <i class="ti ti-user"></i> Customer & Contact
                 </button>
               </li>
               <!-- TAB 5: EQUIPMENT & RENTALS -->
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-rentals-btn" data-bs-toggle="tab" data-bs-target="#tab-rentals" type="button" role="tab">
-                  <i class="ti ti-package"></i> Equipment & Rentals <span class="badge bg-secondary-subtle text-dark rounded-pill ms-1" id="modalRentalsCount">0</span>
+              <li class="nav-item d-none" role="presentation">
+                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-rentals-btn" data-bs-toggle="tab" data-bs-target="#tab-rentals" type="button" role="tab">
+                  <i class="ti ti-package"></i> Equipment & Rentals <span
+                    class="badge bg-secondary-subtle text-dark rounded-pill ms-1" id="modalRentalsCount">0</span>
                 </button>
               </li>
               <!-- TAB 6: FINANCIALS -->
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-financials-btn" data-bs-toggle="tab" data-bs-target="#tab-financials" type="button" role="tab">
+              <li class="nav-item d-none" role="presentation">
+                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-financials-btn" data-bs-toggle="tab" data-bs-target="#tab-financials" type="button"
+                  role="tab">
                   <i class="ti ti-cash"></i> Financials
                 </button>
               </li>
               <!-- TAB 7: ASSOCIATED SHIFTS -->
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-shifts-btn" data-bs-toggle="tab" data-bs-target="#tab-shifts" type="button" role="tab">
-                  <i class="ti ti-clock"></i> Associated Shifts <span class="badge bg-primary rounded-pill ms-1" id="modalShiftsCount">0</span>
+              <li class="nav-item d-none" role="presentation">
+                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-shifts-btn" data-bs-toggle="tab" data-bs-target="#tab-shifts" type="button" role="tab">
+                  <i class="ti ti-clock"></i> Associated Shifts <span class="badge bg-primary rounded-pill ms-1"
+                    id="modalShiftsCount">0</span>
                 </button>
               </li>
               <!-- TAB 8: NOTES -->
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap" id="tab-notes-btn" data-bs-toggle="tab" data-bs-target="#tab-notes" type="button" role="tab">
+              <li class="nav-item d-none" role="presentation">
+                <button class="nav-link py-2 px-3 fw-medium d-inline-flex align-items-center gap-1 text-nowrap"
+                  id="tab-notes-btn" data-bs-toggle="tab" data-bs-target="#tab-notes" type="button" role="tab">
                   <i class="ti ti-notes"></i> Notes
                 </button>
               </li>
@@ -307,19 +341,21 @@
 
           <!-- Tab Contents -->
           <div class="tab-content p-4" id="eventDetailTabContent">
-            
+
             <!-- TAB 1: LEAD SUBMISSIONS & FORMS (CLIENT SIGNATURE, FORM DATA, PHOTOS, MANAGER REPORT) -->
             <div class="tab-pane fade show active" id="tab-submissions" role="tabpanel">
               <div class="row g-4">
-                
+
                 <!-- Client Signature Card -->
-                <div class="col-md-6">
+                <div class="col-12">
                   <div class="card border h-100 shadow-sm">
-                    <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div
+                      class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                       <span class="fw-bold d-inline-flex align-items-center gap-2">
                         <i class="ti ti-writing text-primary fs-5"></i> Client Signature
                       </span>
-                      <span id="sigStatusBadge" class="badge bg-secondary-subtle text-secondary border">Checking...</span>
+                      <span id="sigStatusBadge"
+                        class="badge bg-secondary-subtle text-secondary border">Checking...</span>
                     </div>
                     <div class="card-body p-3 d-flex flex-column justify-content-between">
                       <div id="sigDetailsContainer">
@@ -329,7 +365,13 @@
                         <div class="mb-3 small text-muted">
                           <strong>Timestamp:</strong> <span id="sigTimestampText">—</span>
                         </div>
-                        <div id="sigImageContainer" class="p-3 bg-light rounded border text-center d-flex align-items-center justify-content-center" style="min-height: 160px;">
+                        <div class="mb-3 small text-muted d-none" id="sigNotesContainer">
+                          <strong class="d-block mb-1">Notes:</strong>
+                          <div class="p-2 bg-white rounded border border-light" id="sigNotesText" style="white-space: pre-wrap;">—</div>
+                        </div>
+                        <div id="sigImageContainer"
+                          class="p-3 bg-light rounded border text-center d-flex align-items-center justify-content-center"
+                          style="min-height: 160px;">
                           <span class="text-muted small">No signature uploaded yet.</span>
                         </div>
                       </div>
@@ -338,13 +380,15 @@
                 </div>
 
                 <!-- Manager Report Card -->
-                <div class="col-md-6">
+                <div class="col-12">
                   <div class="card border h-100 shadow-sm">
-                    <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div
+                      class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                       <span class="fw-bold d-inline-flex align-items-center gap-2">
                         <i class="ti ti-file-text text-primary fs-5"></i> Manager Report
                       </span>
-                      <span id="reportStatusBadge" class="badge bg-secondary-subtle text-secondary border">Checking...</span>
+                      <span id="reportStatusBadge"
+                        class="badge bg-secondary-subtle text-secondary border">Checking...</span>
                     </div>
                     <div class="card-body p-3">
                       <div class="mb-2 small text-muted">
@@ -353,9 +397,12 @@
                       <div class="mb-2 small text-muted">
                         <strong>Submitted At:</strong> <span id="reportTimestampText">—</span>
                       </div>
-                      <div class="p-3 bg-light rounded border text-muted small" id="reportContentBox" style="min-height: 150px; max-height: 240px; overflow-y: auto; white-space: pre-wrap;">No manager report recorded.</div>
+                      <div class="p-3 bg-light rounded border text-muted small" id="reportContentBox"
+                        style="min-height: 150px; overflow-y: auto;">No
+                        manager report recorded.</div>
                       <div id="reportAttachmentContainer" class="mt-2 d-none">
-                        <a href="#" target="_blank" id="reportAttachmentLink" class="btn btn-sm btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1">
+                        <a href="#" target="_blank" id="reportAttachmentLink"
+                          class="btn btn-sm btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1">
                           <i class="ti ti-download"></i> Download Report File
                         </a>
                       </div>
@@ -366,11 +413,13 @@
                 <!-- Setup Form / Inspection Data Card -->
                 <div class="col-12">
                   <div class="card border shadow-sm">
-                    <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div
+                      class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                       <span class="fw-bold d-inline-flex align-items-center gap-2">
                         <i class="ti ti-forms text-primary fs-5"></i> Setup Form & Safety Checklist Data
                       </span>
-                      <span id="formDataStatusBadge" class="badge bg-secondary-subtle text-secondary border">Checking...</span>
+                      <span id="formDataStatusBadge"
+                        class="badge bg-secondary-subtle text-secondary border">Checking...</span>
                     </div>
                     <div class="card-body p-3">
                       <div class="mb-2 small text-muted">
@@ -386,11 +435,13 @@
                 <!-- Photos Uploaded by Lead Card -->
                 <div class="col-12">
                   <div class="card border shadow-sm">
-                    <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div
+                      class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                       <span class="fw-bold d-inline-flex align-items-center gap-2">
                         <i class="ti ti-photo text-primary fs-5"></i> Photos Uploaded by Lead
                       </span>
-                      <span id="photosStatusBadge" class="badge bg-secondary-subtle text-secondary border">0 Photos</span>
+                      <span id="photosStatusBadge" class="badge bg-secondary-subtle text-secondary border">0
+                        Photos</span>
                     </div>
                     <div class="card-body p-3">
                       <div id="photosGalleryContainer" class="row g-3">
@@ -522,7 +573,8 @@
 
                         <dt class="col-4 text-muted">Map Navigation:</dt>
                         <dd class="col-8">
-                          <a href="#" target="_blank" id="venueGoogleMapsBtn" class="btn btn-sm btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1">
+                          <a href="#" target="_blank" id="venueGoogleMapsBtn"
+                            class="btn btn-sm btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1">
                             <i class="ti ti-map-2"></i> Open in Google Maps
                           </a>
                         </dd>
@@ -539,11 +591,13 @@
                     <div class="card-body p-3">
                       <div class="mb-3">
                         <label class="small text-muted fw-semibold">Directions / Access:</label>
-                        <div class="p-2 bg-light rounded small border" id="venueDirectionsBox" style="min-height: 60px;">No directions specified.</div>
+                        <div class="p-2 bg-light rounded small border" id="venueDirectionsBox"
+                          style="min-height: 60px;">No directions specified.</div>
                       </div>
                       <div>
                         <label class="small text-muted fw-semibold">Venue Notes:</label>
-                        <div class="p-2 bg-light rounded small border" id="venueNotesBox" style="min-height: 60px;">No venue notes recorded.</div>
+                        <div class="p-2 bg-light rounded small border" id="venueNotesBox" style="min-height: 60px;">No
+                          venue notes recorded.</div>
                       </div>
                     </div>
                   </div>
@@ -621,7 +675,8 @@
             <!-- TAB 5: EQUIPMENT & RENTALS -->
             <div class="tab-pane fade" id="tab-rentals" role="tabpanel">
               <div class="card border">
-                <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                <div
+                  class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                   <span class="fw-bold d-inline-flex align-items-center gap-2">
                     <i class="ti ti-packages text-primary"></i> Rented Equipment & Attractions
                   </span>
@@ -719,11 +774,13 @@
             <!-- TAB 7: ASSOCIATED SHIFTS -->
             <div class="tab-pane fade" id="tab-shifts" role="tabpanel">
               <div class="card border">
-                <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                <div
+                  class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                   <span class="fw-bold d-inline-flex align-items-center gap-2">
                     <i class="ti ti-calendar-event text-primary"></i> Shifts Scheduled on Firebase for this Event
                   </span>
-                  <a href="shifts.html" class="btn btn-sm btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1">
+                  <a href="shifts.html"
+                    class="btn btn-sm btn-outline-primary py-1 px-2 d-inline-flex align-items-center gap-1">
                     <i class="ti ti-external-link"></i> Go to Shifts Page
                   </a>
                 </div>
@@ -763,7 +820,8 @@
                       <i class="ti ti-file-text text-primary"></i> General Event Notes
                     </div>
                     <div class="card-body p-3">
-                      <div class="p-3 bg-light rounded border text-muted small" id="notesGeneralBox" style="min-height: 120px; white-space: pre-wrap;">No general notes recorded.</div>
+                      <div class="p-3 bg-light rounded border text-muted small" id="notesGeneralBox"
+                        style="min-height: 120px; white-space: pre-wrap;">No general notes recorded.</div>
                     </div>
                   </div>
                 </div>
@@ -774,7 +832,8 @@
                       <i class="ti ti-lock text-primary"></i> Internal & IO Notes
                     </div>
                     <div class="card-body p-3">
-                      <div class="p-3 bg-light rounded border text-muted small" id="notesIoBox" style="min-height: 120px; white-space: pre-wrap;">No internal notes recorded.</div>
+                      <div class="p-3 bg-light rounded border text-muted small" id="notesIoBox"
+                        style="min-height: 120px; white-space: pre-wrap;">No internal notes recorded.</div>
                     </div>
                   </div>
                 </div>
@@ -788,11 +847,13 @@
                       <div class="row g-3">
                         <div class="col-md-6">
                           <label class="small text-muted fw-semibold mb-1">Additional Notes 1:</label>
-                          <div class="p-2 bg-light rounded border small text-muted" id="notesAdditional1Box" style="min-height: 60px; white-space: pre-wrap;">None</div>
+                          <div class="p-2 bg-light rounded border small text-muted" id="notesAdditional1Box"
+                            style="min-height: 60px; white-space: pre-wrap;">None</div>
                         </div>
                         <div class="col-md-6">
                           <label class="small text-muted fw-semibold mb-1">Additional Notes 2:</label>
-                          <div class="p-2 bg-light rounded border small text-muted" id="notesAdditional2Box" style="min-height: 60px; white-space: pre-wrap;">None</div>
+                          <div class="p-2 bg-light rounded border small text-muted" id="notesAdditional2Box"
+                            style="min-height: 60px; white-space: pre-wrap;">None</div>
                         </div>
                       </div>
                     </div>
@@ -821,10 +882,12 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content bg-dark border-0">
         <div class="modal-header border-0 pb-0">
-          <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"
+            aria-label="Close"></button>
         </div>
         <div class="modal-body text-center p-3">
-          <img src="" id="photoPreviewImage" class="img-fluid rounded" alt="Preview Photo" style="max-height: 80vh; object-fit: contain;">
+          <img src="" id="photoPreviewImage" class="img-fluid rounded" alt="Preview Photo"
+            style="max-height: 80vh; object-fit: contain;">
           <div id="photoPreviewCaption" class="text-white-50 small mt-2"></div>
         </div>
       </div>

@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let availableRoles = [];
     let canManageShifts = false;
 
+    let currentPage = 1;
+    const pageSize = 10;
+    const paginationInfo = document.getElementById('paginationInfo');
+    const paginationControls = document.getElementById('paginationControls');
+
     onAuthStateChanged(auth, async (user) => {
         if (user && db) {
             try {
@@ -20,21 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!querySnapshot.empty) {
                     const userData = querySnapshot.docs[0].data();
                     const roleId = userData.roleId;
-                    
+
                     const rolesSnap = await getDocs(collection(db, "userRoles"));
                     const roles = rolesSnap.docs.map(doc => ({ id: doc.data().id, name: doc.data().name }));
                     const currentRole = roles.find(r => r.id === roleId);
                     const roleName = currentRole ? currentRole.name.toLowerCase() : '';
-                    
+
                     // Super Admin and HR can manage shifts, Accounts cannot.
                     const isSuperAdminLocal = roleName === 'super admin';
                     const isHr = roleName === 'hr';
                     canManageShifts = isSuperAdminLocal || isHr;
-                    
+
                     const pageSubtitle = document.getElementById('pageSubtitle');
                     const tableTitle = document.getElementById('tableTitle');
                     const createShiftBtn = document.getElementById('createShiftBtn');
-                    
+
                     if (pageSubtitle) {
                         pageSubtitle.textContent = canManageShifts ? 'Manage Vancouver Partyworks Shifts' : 'Vancouver Partyworks Shifts Directory';
                     }
@@ -44,11 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (createShiftBtn && canManageShifts) {
                         createShiftBtn.classList.remove('d-none');
                     }
-                    const notifyUnconfirmedBtn = document.getElementById('notifyUnconfirmedBtn');
-                    if (notifyUnconfirmedBtn && canManageShifts) {
-                        notifyUnconfirmedBtn.classList.remove('d-none');
-                    }
-                    
+
                     // Re-render table if shifts are already loaded
                     if (allShifts.length > 0) {
                         renderShiftsTable();
@@ -68,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const usersSnap = await getDocs(collection(db, "users"));
             const dUsersSnap = await getDocs(collection(db, "dashboardUsers"));
-            
+
             allUsersList = [];
             usersSnap.forEach(d => allUsersList.push({ id: d.id, ...d.data() }));
             dUsersSnap.forEach(d => allUsersList.push({ id: d.id, ...d.data() }));
@@ -88,9 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('shiftEventContainer');
         if (cachedIOLeads === null) {
             const apiKey = import.meta.env.VITE_IO_API_KEY;
-            const apiUrl = `/io-api/leads/?apiKey=${apiKey}&_body=true`;
+            const apiUrl = `/io-api/leads/?apiKey=${apiKey}&limit=250&_body=true`;
             console.log("Fetching IO Events from URL:", apiUrl);
-            
+
             if (container) {
                 container.innerHTML = '<div class="text-muted small">Loading events...</div>';
             }
@@ -104,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const data = await res.json();
                 console.log("API Response Data:", data);
-                
+
                 let leads = [];
                 if (Array.isArray(data)) leads = data;
                 else if (data.items && Array.isArray(data.items)) leads = data.items;
@@ -201,36 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
             errorEl.innerHTML = '';
         }
 
-        // Only validate if date, time, and at least one event are chosen
-        if (!selectedDate || !selectedTime || checkedEvents.length === 0) {
-            return true;
-        }
-
-        // Check if any checked event already has a shift on this date with the same start time
-        let conflictingEvent = null;
-        for (const shift of allShifts) {
-            const shiftInfo = getShiftDateAndTime(shift);
-            if (shiftInfo.dateStr === selectedDate && shiftInfo.timeStr === selectedTime) {
-                const match = checkedEvents.find(eventName => shiftInfo.events.includes(eventName));
-                if (match) {
-                    conflictingEvent = match;
-                    break;
-                }
-            }
-        }
-
-        if (conflictingEvent) {
-            const formattedTime = formatTime12h(selectedTime);
-            timeInput.classList.add('is-invalid');
-            const message = `A shift for "${conflictingEvent}" is already scheduled at ${formattedTime} on this date. Please choose a different start time.`;
-            timeInput.setCustomValidity(message);
-            if (errorEl) {
-                errorEl.innerHTML = `<i class="ti ti-alert-circle me-1"></i>A shift for <strong>${conflictingEvent}</strong> is already scheduled at <strong>${formattedTime}</strong> on this date. Please choose a different start time.`;
-                errorEl.classList.remove('d-none');
-            }
-            return false;
-        }
-
         return true;
     }
 
@@ -258,17 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const dt = (lead.deliverytype || '').toLowerCase().trim();
             if (dt.includes('customer pick') || dt.includes('customer pickup')) return false;
 
-            const isAllowedType = dt.includes('fully staffed') || 
-                                  dt.includes('partyworks') || 
-                                  dt.includes('drop-off') || 
-                                  dt.includes('drop off');
-            if (!isAllowedType) return false;
-
             const rawStart = lead.eventstarttime || lead.fullstart || lead.cushstart || lead.createtime || '';
-            const startDate = typeof rawStart === 'string' ? rawStart.split('T')[0] : '';
-            
+            const startDate = typeof rawStart === 'string' ? rawStart.split('T')[0].split(' ')[0] : '';
+
             const rawEnd = lead.eventendtime || lead.fullend || lead.cushend || rawStart;
-            const endDate = typeof rawEnd === 'string' ? rawEnd.split('T')[0] : startDate;
+            const endDate = typeof rawEnd === 'string' ? rawEnd.split('T')[0].split(' ')[0] : startDate;
 
             if (startDate) {
                 const start = startDate;
@@ -288,18 +253,18 @@ document.addEventListener('DOMContentLoaded', () => {
         validLeads.forEach(lead => {
             const id = `event_${lead.id || Math.random().toString(36).substr(2, 9)}`;
             const displayName = lead.eventname || lead.eventorganization || `Lead #${lead.id}`;
-            
+
             // Check existing shifts on selectedDate for this event
             const existingShifts = allShifts.filter(shift => {
                 const info = getShiftDateAndTime(shift);
                 return info.dateStr === selectedDate && info.events.includes(displayName);
             });
             const existingCount = existingShifts.length;
-            const existingBadge = existingCount > 0 
+            const existingBadge = existingCount > 0
                 ? `<span class="badge bg-secondary-subtle text-secondary small ms-1" title="${existingCount} shift${existingCount > 1 ? 's' : ''} already created on this date">${existingCount} shift${existingCount > 1 ? 's' : ''}</span>`
                 : '';
-            
-            const existingTimes = existingCount > 0 
+
+            const existingTimes = existingCount > 0
                 ? `<div class="text-muted small" style="font-size: 0.72rem;">Scheduled: ${existingShifts.map(s => formatTime12h(getShiftDateAndTime(s).timeStr)).filter(Boolean).join(', ')}</div>`
                 : '';
 
@@ -321,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <option value="Delivery & Pickup">Delivery & Pickup</option>
                   <option value="Full Staff Event">Full Staff Event</option>
                   <option value="Runtime">Runtime</option>
-                  <option value="Setup">Setup</option>
+                  <option value="Set up & Runtime">Set up & Runtime</option>
                   <option value="Runtime & Pickup">Runtime & Pickup</option>
                 </select>
               </div>
@@ -369,12 +334,170 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchInput = document.getElementById('searchShiftInput');
     if (searchInput) {
-        searchInput.addEventListener('input', renderShiftsTable);
+        searchInput.addEventListener('input', () => {
+            currentPage = 1;
+            renderShiftsTable();
+        });
+    }
+
+    // Date Filters
+    let currentFilterDate = null;
+    let currentFilterStatus = '';
+    const filterTodayBtn = document.getElementById('filterTodayBtn');
+    const filterTomorrowBtn = document.getElementById('filterTomorrowBtn');
+    const filterSelectDateBtn = document.getElementById('filterSelectDateBtn');
+    const filterDateContainer = document.getElementById('filterDateContainer');
+    const filterDateInput = document.getElementById('filterDateInput');
+    const filterDateApplyBtn = document.getElementById('filterDateApplyBtn');
+    const filterClearBtn = document.getElementById('filterClearBtn');
+    const filterStatusSelect = document.getElementById('filterStatusSelect');
+
+    function updateClearFilterBtn() {
+        if (currentFilterDate || currentFilterStatus) {
+            if (filterClearBtn) filterClearBtn.classList.remove('d-none');
+        } else {
+            if (filterClearBtn) filterClearBtn.classList.add('d-none');
+        }
+    }
+
+    function setActiveFilterBtn(btn) {
+        [filterTodayBtn, filterTomorrowBtn, filterSelectDateBtn].forEach(b => {
+            if (b) b.classList.remove('active');
+        });
+        if (btn) btn.classList.add('active');
+        updateClearFilterBtn();
+    }
+
+    if (filterStatusSelect) {
+        filterStatusSelect.addEventListener('change', (e) => {
+            currentFilterStatus = e.target.value;
+            updateClearFilterBtn();
+            currentPage = 1;
+            renderShiftsTable();
+        });
+    }
+
+    if (filterTodayBtn) {
+        filterTodayBtn.addEventListener('click', () => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            currentFilterDate = `${yyyy}-${mm}-${dd}`;
+            setActiveFilterBtn(filterTodayBtn);
+            if (filterDateContainer) filterDateContainer.classList.add('d-none');
+            renderShiftsTable();
+        });
+    }
+
+    if (filterTomorrowBtn) {
+        filterTomorrowBtn.addEventListener('click', () => {
+            const tmrw = new Date();
+            tmrw.setDate(tmrw.getDate() + 1);
+            const yyyy = tmrw.getFullYear();
+            const mm = String(tmrw.getMonth() + 1).padStart(2, '0');
+            const dd = String(tmrw.getDate()).padStart(2, '0');
+            currentFilterDate = `${yyyy}-${mm}-${dd}`;
+            setActiveFilterBtn(filterTomorrowBtn);
+            if (filterDateContainer) filterDateContainer.classList.add('d-none');
+            renderShiftsTable();
+        });
+    }
+
+    if (filterSelectDateBtn) {
+        filterSelectDateBtn.addEventListener('click', () => {
+            setActiveFilterBtn(filterSelectDateBtn);
+            if (filterDateContainer) {
+                filterDateContainer.classList.remove('d-none');
+            }
+        });
+    }
+
+    if (filterDateApplyBtn) {
+        filterDateApplyBtn.addEventListener('click', () => {
+            if (filterDateInput && filterDateInput.value) {
+                currentFilterDate = filterDateInput.value;
+                if (filterClearBtn) filterClearBtn.classList.remove('d-none');
+                renderShiftsTable();
+            }
+        });
+    }
+
+    if (filterClearBtn) {
+        filterClearBtn.addEventListener('click', () => {
+            currentFilterDate = null;
+            currentFilterStatus = '';
+            if (filterStatusSelect) filterStatusSelect.value = '';
+            setActiveFilterBtn(null);
+            if (filterDateInput) filterDateInput.value = '';
+            if (filterDateContainer) filterDateContainer.classList.add('d-none');
+            renderShiftsTable();
+        });
+    }
+
+    function updateShiftStatusAlert(shifts) {
+        const container = document.getElementById('shiftStatusAlertContainer');
+        const alertDiv = document.getElementById('shiftStatusAlert');
+        const icon = document.getElementById('shiftStatusAlertIcon');
+        const messageSpan = document.getElementById('shiftStatusAlertMessage');
+
+        if (!container || !alertDiv || !icon || !messageSpan) return;
+
+        let totalStaff = 0;
+        let rejectedCount = 0;
+        let notRespondedCount = 0;
+
+        const scheduledShifts = shifts ? shifts.filter(s => {
+            const st = (s.status || '').toLowerCase();
+            return st === 'scheduled' || st === 'unconfirmed';
+        }) : [];
+
+        if (scheduledShifts.length > 0) {
+            scheduledShifts.forEach(shift => {
+                const membersList = shift.members || shift.staffMembers || [];
+                if (membersList && Array.isArray(membersList)) {
+                    membersList.forEach(member => {
+                        totalStaff++;
+                        const s = (member.status || '').toLowerCase();
+                        if (s === 'rejected' || s === 'reject' || s === 'declined') {
+                            rejectedCount++;
+                        } else if (s !== 'confirmed') {
+                            notRespondedCount++;
+                        }
+                    });
+                }
+            });
+        }
+
+        if (scheduledShifts.length === 0) {
+            container.classList.add('d-none');
+            return;
+        }
+
+        container.classList.remove('d-none');
+        alertDiv.className = 'alert mb-0 d-flex align-items-center gap-2 border';
+
+        if (totalStaff === 0) {
+            alertDiv.classList.add('alert-secondary', 'bg-secondary-subtle', 'text-secondary', 'border-secondary-subtle');
+            icon.className = 'ti ti-info-circle fs-4';
+            messageSpan.innerHTML = '<strong>Tomorrow\'s shifts</strong> have no staff assigned yet.';
+        } else if (rejectedCount === 0 && notRespondedCount === 0) {
+            alertDiv.classList.add('alert-success', 'bg-success-subtle', 'text-success', 'border-success-subtle');
+            icon.className = 'ti ti-check fs-4';
+            messageSpan.innerHTML = '<strong>Everyone\'s in!</strong> All set for tomorrow.';
+        } else {
+            alertDiv.classList.add('alert-warning', 'bg-warning-subtle', 'text-warning-emphasis', 'border-warning-subtle');
+            icon.className = 'ti ti-alert-triangle fs-4';
+            let parts = [];
+            if (rejectedCount > 0) parts.push(`<strong>${rejectedCount} staff rejected</strong>`);
+            if (notRespondedCount > 0) parts.push(`<strong>${notRespondedCount} staff not responded</strong>`);
+            messageSpan.innerHTML = `Attention: ${parts.join(' and ')} for tomorrow's shift(s). Please kindly assign new ones.`;
+        }
     }
 
     function renderShiftsTable() {
         shiftsTableBody.innerHTML = '';
-        
+
         const actionHeader = document.getElementById('actionColumnHeader');
         if (actionHeader) {
             actionHeader.style.display = canManageShifts ? '' : 'none';
@@ -384,21 +507,65 @@ document.addEventListener('DOMContentLoaded', () => {
         let filteredShifts = allShifts;
 
         if (searchTerm) {
-            filteredShifts = allShifts.filter(shift => 
+            filteredShifts = allShifts.filter(shift =>
                 (shift.venueName && shift.venueName.toLowerCase().includes(searchTerm))
             );
         }
 
-        if (filteredShifts.length === 0) {
-            shiftsTableBody.innerHTML = `<tr><td colspan="${canManageShifts ? 6 : 5}" class="text-center py-4 text-muted">No shifts found.</td></tr>`;
+        if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
+            filteredShifts = filteredShifts.filter(shift => {
+                const info = getShiftDateAndTime(shift);
+                return info.dateStr === currentFilterDate;
+            });
+        }
+
+        if (typeof currentFilterStatus !== 'undefined' && currentFilterStatus) {
+            filteredShifts = filteredShifts.filter(shift => {
+                const s = (shift.status || 'scheduled').toLowerCase();
+                return s === currentFilterStatus;
+            });
+        }
+
+        const tmrw = new Date();
+        tmrw.setDate(tmrw.getDate() + 1);
+        const yyyy = tmrw.getFullYear();
+        const mm = String(tmrw.getMonth() + 1).padStart(2, '0');
+        const dd = String(tmrw.getDate()).padStart(2, '0');
+        const tomorrowDateStr = `${yyyy}-${mm}-${dd}`;
+
+        const tomorrowShifts = allShifts.filter(shift => {
+            const info = getShiftDateAndTime(shift);
+            return info.dateStr === tomorrowDateStr;
+        });
+
+        updateShiftStatusAlert(tomorrowShifts);
+
+        const totalItems = filteredShifts.length;
+        const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        if (totalItems === 0) {
+            shiftsTableBody.innerHTML = `<tr><td colspan="${canManageShifts ? 7 : 6}" class="text-center py-4 text-muted">No shifts found.</td></tr>`;
+            if (paginationInfo) paginationInfo.textContent = 'Showing 0 of 0 shifts';
+            if (paginationControls) paginationControls.innerHTML = '';
             return;
         }
 
-        filteredShifts.forEach((shift) => {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalItems);
+        const pageShifts = filteredShifts.slice(startIndex, endIndex);
+
+        if (paginationInfo) {
+            paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} shifts`;
+        }
+
+        pageShifts.forEach((shift) => {
             const venue = shift.venueName || 'N/A';
             const loc = shift.meetingLocation || 'N/A';
             const role = shift.role || 'N/A';
-            const status = shift.status || 'unconfirmed';
+            const status = shift.status || 'scheduled';
             const assigned = shift.assignedUserId || '';
 
             let dateDisplay = 'N/A';
@@ -408,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const d = shift.dateTime.toDate();
                     dateDisplay = d.toLocaleString();
                     dateValue = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                } else if (shift.dateTime.seconds) { 
+                } else if (shift.dateTime.seconds) {
                     const d = new Date(shift.dateTime.seconds * 1000);
                     dateDisplay = d.toLocaleString();
                     dateValue = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -425,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const isUnconfirmed = (status || '').toLowerCase() === 'unconfirmed';
+            const isUnconfirmed = (status || '').toLowerCase() === 'scheduled';
             const notifyBtn = (canManageShifts && isUnconfirmed) ? `
                 <button class="btn btn-sm btn-outline-primary notify-shift-btn me-1"
                     data-id="${shift.id}"
@@ -436,9 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="ti ti-bell-ringing"></i>
                 </button>` : '';
 
-            const actionCell = canManageShifts ? `
-                <td class="text-end text-nowrap">
-                    ${notifyBtn}
+            const editBtn = (canManageShifts && isUnconfirmed) ? `
                     <button class="btn btn-sm btn-outline-secondary edit-shift-btn"
                         data-id="${shift.id}"
                         data-venue="${venue}"
@@ -449,7 +614,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         data-assigned="${assigned}"
                         title="Edit Shift">
                         <i class="ti ti-edit"></i>
-                    </button>
+                    </button>` : '';
+
+            const actionCell = canManageShifts ? `
+                <td class="text-end text-nowrap">
+                    ${notifyBtn}
+                    ${editBtn}
                     <button class="btn btn-sm btn-outline-danger delete-shift-btn ms-1"
                         data-id="${shift.id}"
                         title="Delete Shift">
@@ -457,30 +627,104 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </td>` : '';
 
+            let confirmedCount = 0;
+            let rejectedCount = 0;
+            let pendingCount = 0;
+            let totalMembers = 0;
+
+            const membersList = shift.members || shift.staffMembers || [];
+            if (membersList && Array.isArray(membersList)) {
+                totalMembers = membersList.length;
+                membersList.forEach(member => {
+                    const s = (member.status || '').toLowerCase();
+                    if (s === 'confirmed') confirmedCount++;
+                    else if (s === 'rejected' || s === 'reject' || s === 'declined') rejectedCount++;
+                    else pendingCount++;
+                });
+            }
+
+            const membersStatusChips = `
+                <div class="d-flex gap-1 flex-wrap">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle" title="${confirmedCount} Confirmed out of ${totalMembers}">${confirmedCount}/${totalMembers} <i class="ti ti-check"></i></span>
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle" title="${pendingCount} Not Responded">${pendingCount} <i class="ti ti-clock"></i></span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="${rejectedCount} Rejected">${rejectedCount} <i class="ti ti-x"></i></span>
+                </div>
+            `;
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${venue}</td>
                 <td>${dateDisplay}</td>
                 <td>${loc}</td>
                 <td>${role}</td>
+                <td>${membersStatusChips}</td>
                 <td>${formatStatusDisplay(status)}</td>
                 ${actionCell}
             `;
             shiftsTableBody.appendChild(tr);
         });
+        
+        renderPaginationControls(totalPages);
+    }
+
+    function renderPaginationControls(totalPages) {
+        if (typeof paginationControls === 'undefined' || !paginationControls) return;
+        paginationControls.innerHTML = '';
+
+        // Previous Button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+        prevLi.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                renderShiftsTable();
+            }
+        });
+        paginationControls.appendChild(prevLi);
+
+        // Page Numbers
+        for (let p = 1; p <= totalPages; p++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${p === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+            li.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage !== p) {
+                    currentPage = p;
+                    renderShiftsTable();
+                }
+            });
+            paginationControls.appendChild(li);
+        }
+
+        // Next Button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+        nextLi.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderShiftsTable();
+            }
+        });
+        paginationControls.appendChild(nextLi);
     }
 
     function formatStatusDisplay(statusStr) {
-        if (!statusStr) return 'Un Confirmed';
+        if (!statusStr) return 'Scheduled';
         const s = String(statusStr).trim().toLowerCase();
-        if (s === 'confirmed') return 'Confirmed';
-        if (s === 'unconfirmed') return 'Un Confirmed';
+        if (s === 'scheduled' || s === 'unconfirmed') return 'Scheduled';
+        if (s === 'active') return 'Active';
+        if (s === 'completed') return 'Completed';
         return statusStr.charAt(0).toUpperCase() + statusStr.slice(1);
     }
 
     function loadShifts() {
         if (!db) {
-            shiftsTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No shifts found.</td></tr>`;
+            shiftsTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No shifts found.</td></tr>`;
             return;
         }
 
@@ -488,37 +732,32 @@ document.addEventListener('DOMContentLoaded', () => {
             allShifts = [];
             querySnapshot.forEach((docSnap) => {
                 const shift = docSnap.data();
+
+                // Auto-migrate legacy status in database
+                if (shift.status === 'unconfirmed') {
+                    updateDoc(doc(db, "shifts", docSnap.id), { status: 'scheduled' }).catch(console.error);
+                }
+
                 allShifts.push({ id: docSnap.id, ...shift });
             });
             renderShiftsTable();
         }, (error) => {
             console.error("Error loading shifts: ", error);
-            shiftsTableBody.innerHTML = `<tr><td colspan="${canManageShifts ? 6 : 5}" class="text-center py-4 text-danger">Error loading shifts.</td></tr>`;
+            shiftsTableBody.innerHTML = `<tr><td colspan="${canManageShifts ? 7 : 6}" class="text-center py-4 text-danger">Error loading shifts.</td></tr>`;
         });
     }
 
     function updateLeadRequirement() {
         const locationInput = document.getElementById('shiftMeetingLocation');
-        const leadSelect = document.getElementById('shiftLead');
-        const leadLabel = document.querySelector('label[for="shiftLead"]');
-        if (!locationInput || !leadSelect) return;
+        const leadSearch = document.getElementById('shiftLeadSearch');
+        const leadLabel = leadSearch ? leadSearch.previousElementSibling : null;
+        if (!locationInput) return;
 
         const isWarehouse = locationInput.value.trim().toLowerCase() === 'warehouse';
         if (isWarehouse) {
-            leadSelect.setAttribute('required', '');
-            leadSelect.required = true;
             if (leadLabel) leadLabel.textContent = 'Select Lead';
-            if (leadSelect.options && leadSelect.options.length > 0 && leadSelect.options[0].value === '') {
-                leadSelect.options[0].text = 'Select Lead...';
-            }
         } else {
-            leadSelect.removeAttribute('required');
-            leadSelect.required = false;
-            leadSelect.setCustomValidity('');
             if (leadLabel) leadLabel.textContent = 'Select Lead (Optional)';
-            if (leadSelect.options && leadSelect.options.length > 0 && leadSelect.options[0].value === '') {
-                leadSelect.options[0].text = 'Select Lead (Optional)...';
-            }
         }
     }
 
@@ -541,11 +780,11 @@ document.addEventListener('DOMContentLoaded', () => {
         createShiftNotes.forEach((note, index) => {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 px-3';
-            
+
             const span = document.createElement('span');
             span.className = 'small me-2 text-break';
             span.textContent = `• ${note}`;
-            
+
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'btn-close btn-close-xs ms-auto';
@@ -595,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (allUsersList.length === 0) {
                 await fetchRolesAndUsers();
             }
-            
+
             createShiftNotes = [];
             renderCreateShiftNotes();
 
@@ -610,16 +849,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 timeErrorEl.innerHTML = '';
             }
 
-            const leadSelect = document.getElementById('shiftLead');
+            const leadContainer = document.getElementById('shiftLeadContainer');
             const staffContainer = document.getElementById('shiftStaffContainer');
-            
-            leadSelect.innerHTML = '<option value="" selected>Select Lead...</option>';
+
+            leadContainer.innerHTML = '';
             updateLeadRequirement();
             staffContainer.innerHTML = '';
-            
+
             const assignedLeads = new Set();
             const assignedStaff = new Set();
-            
+
             allShifts.forEach(shift => {
                 if (shift.lead) assignedLeads.add(shift.lead);
                 if (shift.staff && Array.isArray(shift.staff)) {
@@ -631,26 +870,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roleName = (user.displayRole || '').toLowerCase();
                 const isLead = roleName.includes('lead');
                 const displayName = user.displayName || user.email || user.phoneNumber || user.id;
-                
+
                 if (isLead && !assignedLeads.has(user.id)) {
-                    const opt = document.createElement('option');
-                    opt.value = user.id;
-                    opt.textContent = displayName;
-                    leadSelect.appendChild(opt);
+                    const div = document.createElement('div');
+                    div.className = 'd-flex justify-content-between align-items-center mb-2 item-row';
+                    div.innerHTML = `
+                      <label class="form-check-label item-name" for="lead_${user.id}">${displayName}</label>
+                      <input class="form-check-input lead-radio" type="radio" name="shiftLeadRadio" value="${user.id}" id="lead_${user.id}">
+                    `;
+                    leadContainer.appendChild(div);
                 }
                 const rId = parseInt(user.roleId, 10);
                 // Only show users with roleId 5 in the staff list
                 if (rId === 5 && !assignedLeads.has(user.id) && !assignedStaff.has(user.id)) {
                     const div = document.createElement('div');
-                    div.className = 'd-flex justify-content-between align-items-center mb-2';
+                    div.className = 'd-flex justify-content-between align-items-center mb-2 item-row';
                     div.innerHTML = `
-                      <label class="form-check-label" for="staff_${user.id}">${displayName}</label>
+                      <label class="form-check-label item-name" for="staff_${user.id}">${displayName}</label>
                       <input class="form-check-input staff-checkbox" type="checkbox" value="${user.id}" id="staff_${user.id}">
                     `;
                     staffContainer.appendChild(div);
                 }
             });
-            
+
+            if (leadContainer.innerHTML === '') {
+                leadContainer.innerHTML = '<div class="text-muted small">No leads available</div>';
+            }
             if (staffContainer.innerHTML === '') {
                 staffContainer.innerHTML = '<div class="text-muted small">No staff available</div>';
             }
@@ -694,15 +939,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const meetingLocation = document.getElementById('shiftMeetingLocation').value;
             const isWarehouse = meetingLocation.trim().toLowerCase() === 'warehouse';
-            const leadSelect = document.getElementById('shiftLead');
-            const lead = leadSelect.value;
+            const leadRadio = document.querySelector('.lead-radio:checked');
+            const lead = leadRadio ? leadRadio.value : '';
 
             if (isWarehouse && !lead) {
-                leadSelect.setCustomValidity('Please select a Lead when Meeting Location is Warehouse.');
-                leadSelect.reportValidity();
+                alert('Please select a Lead when Meeting Location is Warehouse.');
                 return;
-            } else {
-                leadSelect.setCustomValidity('');
             }
 
             if (!validateShiftStartTime()) {
@@ -717,6 +959,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const startTime = document.getElementById('shiftStartTime').value;
             const staffCheckboxes = document.querySelectorAll('.staff-checkbox:checked');
             const staff = Array.from(staffCheckboxes).map(cb => cb.value);
+            if (lead && !staff.includes(lead)) {
+                staff.push(lead);
+            }
 
             let dateTimeVal = null;
             if (date && startTime) {
@@ -724,9 +969,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const staffMembers = staff.map(id => ({ id: id, status: 'pending' }));
+                const members = staff.map(id => ({
+                    id: id,
+                    status: 'pending',
+                    role: id === lead ? 'Lead' : 'Event Staff'
+                }));
 
-                await addDoc(collection(db, "shifts"), {
+                const shiftDocRef = await addDoc(collection(db, "shifts"), {
                     assignedUserId: lead,
                     clientSignatureSubmitted: false,
                     createdAt: serverTimestamp(),
@@ -743,19 +992,65 @@ document.addEventListener('DOMContentLoaded', () => {
                     eventTypes: eventTypesMap,
                     setupFormSubmitted: false,
                     setupPhotosSubmitted: false,
-                    staffMembers: staffMembers,
-                    status: 'confirmed',
+                    members: members,
+                    status: 'scheduled',
                     venueName: events.join(', ') || 'No Event Selected',
-                    
+
                     // Preserving exact string inputs from UI for fallback/reference
                     dateString: date,
                     startTimeString: startTime,
                     eventsList: events,
                 });
-                
+
+                // Send push notification to lead and staff
+                const recipientIds = new Set();
+                if (lead) recipientIds.add(lead);
+                staff.forEach(id => recipientIds.add(id));
+
+                if (recipientIds.size > 0) {
+                    const venueName = events.join(', ') || 'New Shift';
+                    const formattedTime = formatTime12h(startTime);
+                    const title = "New Shift Assigned";
+                    const body = `New shift assigned: ${venueName} on ${date} at ${formattedTime}`;
+
+                    try {
+                        await addDoc(collection(db, "pushNotifications"), {
+                            type: "new_shift",
+                            shiftId: shiftDocRef.id,
+                            venueName: venueName,
+                            recipientUserIds: Array.from(recipientIds),
+                            recipientCount: recipientIds.size,
+                            title: title,
+                            body: body,
+                            status: "pending",
+                            sentByEmail: auth.currentUser ? auth.currentUser.email : "admin",
+                            sentByName: auth.currentUser ? (auth.currentUser.displayName || auth.currentUser.email) : "Admin",
+                            createdAt: serverTimestamp()
+                        });
+
+                        for (const userId of recipientIds) {
+                            try {
+                                await addDoc(collection(db, "users", userId, "notifications"), {
+                                    title: title,
+                                    body: body,
+                                    type: "new_shift",
+                                    shiftId: shiftDocRef.id,
+                                    venueName: venueName,
+                                    read: false,
+                                    createdAt: serverTimestamp()
+                                });
+                            } catch (subErr) {
+                                console.warn("Could not write in-app notification for user:", userId, subErr);
+                            }
+                        }
+                    } catch (pushErr) {
+                        console.error("Error sending push notification for new shift:", pushErr);
+                    }
+                }
+
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addShiftModal'));
                 if (modal) modal.hide();
-                
+
                 addShiftForm.reset();
                 validateShiftStartTime();
                 document.getElementById('shiftMeetingLocation').value = 'Warehouse';
@@ -803,19 +1098,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const timeInput = document.getElementById('editShiftStartTime');
             if (timeInput) timeInput.value = shiftInfo.timeStr || '';
 
-            // 2. Event Name (disabled)
-            const eventNameInput = document.getElementById('editShiftEventName');
-            const eventName = shift.venueName || (Array.isArray(shift.eventsList) ? shift.eventsList.join(', ') : editBtn.dataset.venue || '');
-            if (eventNameInput) eventNameInput.value = eventName;
+            // 2. Event Name & Type (dynamically rendered)
+            const editEventContainer = document.getElementById('editShiftEventContainer');
+            if (editEventContainer) {
+                editEventContainer.innerHTML = '';
+                const eventsArray = (Array.isArray(shift.eventsList) && shift.eventsList.length > 0)
+                    ? shift.eventsList
+                    : [shift.venueName || editBtn.dataset.venue || 'Unknown Event'];
 
-            // 3. Type (Dropdown of all event types)
-            const currentType = shift.role || editBtn.dataset.role || 'Delivery';
-            const typeSelect = document.getElementById('editShiftType');
-            if (typeSelect) {
-                if (!Array.from(typeSelect.options).some(opt => opt.value === currentType)) {
-                    typeSelect.add(new Option(currentType, currentType));
-                }
-                typeSelect.value = currentType;
+                const eventTypesMap = shift.eventTypes || {};
+                const fallbackRole = shift.role || editBtn.dataset.role || 'Delivery';
+
+                eventsArray.forEach((evtName, index) => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'd-flex justify-content-between align-items-center p-2 rounded border bg-white edit-event-row';
+                    if (index > 0) rowDiv.classList.add('mt-2'); // spacing
+
+                    const currentType = eventTypesMap[evtName] || fallbackRole;
+
+                    rowDiv.innerHTML = `
+                      <div class="d-flex align-items-center me-2 flex-grow-1 text-truncate" style="max-width: 62%;">
+                        <input class="form-check-input mt-0 me-2" type="checkbox" checked disabled>
+                        <input type="text" class="form-control form-control-plaintext fw-medium text-dark text-truncate p-0 m-0 w-100 edit-event-name-input" value="${evtName}" disabled readonly style="background: transparent; height: auto;">
+                      </div>
+                      <div style="width: 165px; flex-shrink: 0;">
+                        <select class="form-select form-select-sm bg-light edit-event-type-select" required>
+                          <option value="Delivery" ${currentType === 'Delivery' ? 'selected' : ''}>Delivery</option>
+                          <option value="Pickup" ${currentType === 'Pickup' ? 'selected' : ''}>Pickup</option>
+                          <option value="Delivery & Pickup" ${currentType === 'Delivery & Pickup' ? 'selected' : ''}>Delivery & Pickup</option>
+                          <option value="Full Staff Event" ${currentType === 'Full Staff Event' ? 'selected' : ''}>Full Staff Event</option>
+                          <option value="Runtime" ${currentType === 'Runtime' ? 'selected' : ''}>Runtime</option>
+                          <option value="Set up and Runtime" ${currentType === 'Set up & Runtime' || currentType === 'Set up and Runtime' ? 'selected' : ''}>Set up & Runtime</option>
+                          <option value="Runtime & Pickup" ${currentType === 'Runtime & Pickup' ? 'selected' : ''}>Runtime & Pickup</option>
+                        </select>
+                      </div>
+                    `;
+                    editEventContainer.appendChild(rowDiv);
+                });
             }
 
             // 4. Meeting Location
@@ -843,10 +1162,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 await fetchRolesAndUsers();
             }
 
+            const getMemberStatus = (uid) => {
+                const arr = shift.members || shift.staffMembers || [];
+                if (Array.isArray(arr)) {
+                    const member = arr.find(m => {
+                        if (!m) return false;
+                        const id = m.id || m.uid || m.userId || m.employeeId || m.staffId;
+                        return String(id).trim() === uid;
+                    });
+                    if (member && member.status) {
+                        return member.status;
+                    }
+                }
+                return null;
+            };
+
+            const getMemberStatusBadgeHtml = (mStatus) => {
+                if (!mStatus) return '';
+                const s = mStatus.toLowerCase();
+                let formattedStatus = mStatus.charAt(0).toUpperCase() + mStatus.slice(1);
+                if (s === 'unconfirmed') formattedStatus = 'Un Confirmed';
+
+                let badgeClass = 'bg-secondary-subtle text-secondary border-secondary-subtle';
+                if (s === 'confirmed') {
+                    badgeClass = 'bg-success-subtle text-success border-success-subtle';
+                } else if (s === 'rejected' || s === 'reject' || s === 'declined') {
+                    badgeClass = 'bg-danger-subtle text-danger border-danger-subtle';
+                } else if (s === 'pending' || s === 'unconfirmed') {
+                    badgeClass = 'bg-warning-subtle text-warning border-warning-subtle';
+                }
+
+                return `<span class="badge border ${badgeClass} ms-2 fw-normal">${formattedStatus}</span>`;
+            };
+
             // 6. Lead (Load all leads)
-            const leadSelect = document.getElementById('editShiftLead');
-            if (leadSelect) {
-                leadSelect.innerHTML = '<option value="">Select Lead...</option>';
+            const leadContainer = document.getElementById('editShiftLeadContainer');
+            if (leadContainer) {
+                leadContainer.innerHTML = '';
                 const currentLeadId = String(shift.assignedUserId || shift.lead || editBtn.dataset.assigned || '').trim();
 
                 const leadUsers = [];
@@ -872,16 +1224,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 leadUsers.forEach(user => {
                     const uid = String(user.id).trim();
-                    const displayName = user.displayName || user.email || user.phoneNumber || user.id;
-                    const opt = document.createElement('option');
-                    opt.value = uid;
-                    opt.textContent = displayName;
-                    if (uid === currentLeadId) opt.selected = true;
-                    leadSelect.appendChild(opt);
+                    let displayName = user.displayName || user.email || user.phoneNumber || user.id;
+
+                    if (uid === currentLeadId) {
+                        const mStatus = getMemberStatus(uid);
+                        if (mStatus) {
+                            displayName += getMemberStatusBadgeHtml(mStatus);
+                        }
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = 'd-flex justify-content-between align-items-center mb-2 item-row';
+                    div.innerHTML = `
+                      <label class="form-check-label item-name" for="edit_lead_${uid}">${displayName}</label>
+                      <input class="form-check-input edit-lead-radio" type="radio" name="editShiftLeadRadio" value="${uid}" id="edit_lead_${uid}" ${uid === currentLeadId ? 'checked' : ''}>
+                    `;
+                    leadContainer.appendChild(div);
                 });
 
-                if (currentLeadId) {
-                    leadSelect.value = currentLeadId;
+                if (leadContainer.innerHTML === '') {
+                    leadContainer.innerHTML = '<div class="text-muted small">No leads available</div>';
                 }
                 updateEditLeadRequirement();
             }
@@ -902,12 +1264,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
 
+                if (Array.isArray(shift.members)) shift.members.forEach(addCandidateId);
                 if (Array.isArray(shift.staffMembers)) shift.staffMembers.forEach(addCandidateId);
                 if (Array.isArray(shift.staff)) shift.staff.forEach(addCandidateId);
                 if (Array.isArray(shift.staffList)) shift.staffList.forEach(addCandidateId);
                 if (Array.isArray(shift.assignedStaff)) shift.assignedStaff.forEach(addCandidateId);
                 if (Array.isArray(shift.assignedUsers)) shift.assignedUsers.forEach(addCandidateId);
-                if (shift.staffMembers && typeof shift.staffMembers === 'object' && !Array.isArray(shift.staffMembers)) {
+                if (shift.members && typeof shift.members === 'object' && !Array.isArray(shift.members)) {
+                    Object.keys(shift.members).forEach(k => {
+                        if (shift.members[k]) currentStaffIds.add(String(k).trim());
+                    });
+                } else if (shift.staffMembers && typeof shift.staffMembers === 'object' && !Array.isArray(shift.staffMembers)) {
                     Object.keys(shift.staffMembers).forEach(k => {
                         if (shift.staffMembers[k]) currentStaffIds.add(String(k).trim());
                     });
@@ -919,7 +1286,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const uid = String(user.id).trim();
                     const rId = parseInt(user.roleId, 10);
                     const roleName = (user.displayRole || user.role || '').toLowerCase();
-                    const isStaff = rId === 5 || roleName.includes('staff') || currentStaffIds.has(uid);
+                    const isLead = roleName.includes('lead');
+                    const isStaff = (rId === 5 || roleName.includes('staff') || currentStaffIds.has(uid)) && !isLead;
 
                     if (isStaff && !staffUsersMap.has(uid)) {
                         staffUsersMap.set(uid, user);
@@ -929,7 +1297,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Ensure any ID from currentStaffIds not present in allUsersList is still represented
                 currentStaffIds.forEach(staffId => {
                     if (!staffUsersMap.has(staffId)) {
-                        staffUsersMap.set(staffId, { id: staffId, displayName: `Staff (${staffId})` });
+                        const userInAll = allUsersList.find(u => String(u.id).trim() === staffId);
+                        const isLead = userInAll && (userInAll.displayRole || userInAll.role || '').toLowerCase().includes('lead');
+                        if (!isLead) {
+                            staffUsersMap.set(staffId, { id: staffId, displayName: `Staff (${staffId})` });
+                        }
                     }
                 });
 
@@ -949,13 +1321,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 staffList.forEach(user => {
                     const uid = String(user.id).trim();
-                    const displayName = user.displayName || user.email || user.phoneNumber || user.id;
+                    let displayName = user.displayName || user.email || user.phoneNumber || user.id;
                     const isChecked = currentStaffIds.has(uid);
 
+                    if (isChecked) {
+                        const mStatus = getMemberStatus(uid);
+                        if (mStatus) {
+                            displayName += getMemberStatusBadgeHtml(mStatus);
+                        }
+                    }
+
                     const div = document.createElement('div');
-                    div.className = 'd-flex justify-content-between align-items-center mb-2';
+                    div.className = 'd-flex justify-content-between align-items-center mb-2 item-row';
                     div.innerHTML = `
-                      <label class="form-check-label" for="edit_staff_${uid}">${displayName}</label>
+                      <label class="form-check-label item-name" for="edit_staff_${uid}">${displayName}</label>
                       <input class="form-check-input edit-staff-checkbox" type="checkbox" value="${uid}" id="edit_staff_${uid}" ${isChecked ? 'checked' : ''}>
                     `;
                     const cb = div.querySelector('.edit-staff-checkbox');
@@ -998,11 +1377,11 @@ document.addEventListener('DOMContentLoaded', () => {
         editShiftNotes.forEach((note, index) => {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 px-3';
-            
+
             const span = document.createElement('span');
             span.className = 'small me-2 text-break';
             span.textContent = `• ${note}`;
-            
+
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'btn-close btn-close-xs ms-auto';
@@ -1046,26 +1425,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateEditLeadRequirement() {
         const locationInput = document.getElementById('editShiftMeetingLocation');
-        const leadSelect = document.getElementById('editShiftLead');
-        const leadLabel = document.querySelector('label[for="editShiftLead"]');
-        if (!locationInput || !leadSelect) return;
+        const leadSearch = document.getElementById('editShiftLeadSearch');
+        const leadLabel = leadSearch ? leadSearch.previousElementSibling : null;
+        if (!locationInput) return;
 
         const isWarehouse = locationInput.value.trim().toLowerCase() === 'warehouse';
         if (isWarehouse) {
-            leadSelect.setAttribute('required', '');
-            leadSelect.required = true;
             if (leadLabel) leadLabel.textContent = 'Select Lead';
-            if (leadSelect.options && leadSelect.options.length > 0 && leadSelect.options[0].value === '') {
-                leadSelect.options[0].text = 'Select Lead...';
-            }
         } else {
-            leadSelect.removeAttribute('required');
-            leadSelect.required = false;
-            leadSelect.setCustomValidity('');
             if (leadLabel) leadLabel.textContent = 'Select Lead (Optional)';
-            if (leadSelect.options && leadSelect.options.length > 0 && leadSelect.options[0].value === '') {
-                leadSelect.options[0].text = 'Select Lead (Optional)...';
-            }
         }
     }
 
@@ -1079,7 +1447,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const idInput = document.getElementById('editShiftId');
         const dateInput = document.getElementById('editShiftDate');
         const timeInput = document.getElementById('editShiftStartTime');
-        const eventNameInput = document.getElementById('editShiftEventName');
         const errorEl = document.getElementById('editShiftStartTimeError');
 
         if (!timeInput) return true;
@@ -1087,7 +1454,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentShiftId = idInput ? idInput.value : '';
         const selectedDate = dateInput ? dateInput.value : '';
         const selectedTime = normalizeTime(timeInput.value);
-        const eventName = eventNameInput ? eventNameInput.value.trim() : '';
+
+        const eventNameInputs = document.querySelectorAll('.edit-event-name-input');
+        const editEvents = Array.from(eventNameInputs).map(input => input.value.trim()).filter(Boolean);
 
         // Reset error state
         timeInput.classList.remove('is-invalid');
@@ -1097,19 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             errorEl.innerHTML = '';
         }
 
-        if (!selectedDate || !selectedTime || !eventName) return true;
-
-        // Extract events for current shift
-        const currentShift = allShifts.find(s => s.id === currentShiftId);
-        let editEvents = [];
-        if (currentShift && Array.isArray(currentShift.eventsList) && currentShift.eventsList.length > 0) {
-            editEvents = [...currentShift.eventsList];
-        } else {
-            editEvents = eventName.split(',').map(s => s.trim()).filter(Boolean);
-        }
-        eventName.split(',').map(s => s.trim()).filter(Boolean).forEach(e => {
-            if (!editEvents.includes(e)) editEvents.push(e);
-        });
+        if (!selectedDate || !selectedTime || editEvents.length === 0) return true;
 
         // Check against other shifts
         let conflictingEvent = null;
@@ -1160,24 +1517,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentShift = allShifts.find(s => s.id === id) || {};
 
             const date = document.getElementById('editShiftDate').value;
-            const eventName = document.getElementById('editShiftEventName').value;
-            const typeVal = document.getElementById('editShiftType').value;
+
+            const eventNameInputs = document.querySelectorAll('.edit-event-name-input');
+            const eventTypeSelects = document.querySelectorAll('.edit-event-type-select');
+
+            const events = [];
+            const eventTypesMap = {};
+            const typeValues = [];
+
+            eventNameInputs.forEach((input, index) => {
+                const eName = input.value.trim();
+                if (eName) {
+                    events.push(eName);
+                    const tVal = eventTypeSelects[index] ? eventTypeSelects[index].value : 'Delivery';
+                    eventTypesMap[eName] = tVal;
+                    typeValues.push(tVal);
+                }
+            });
+            const uniqueTypes = Array.from(new Set(typeValues));
+            const role = uniqueTypes.join(', ') || 'Delivery';
+            const eventName = events.join(', ') || 'Unknown Event';
+
             const meetingLocation = document.getElementById('editShiftMeetingLocation').value;
             const startTime = document.getElementById('editShiftStartTime').value;
-            const leadSelect = document.getElementById('editShiftLead');
-            const lead = leadSelect ? leadSelect.value : '';
+            const leadRadio = document.querySelector('.edit-lead-radio:checked');
+            const lead = leadRadio ? leadRadio.value : '';
             const status = document.getElementById('editShiftStatus').value;
 
             // Check Warehouse lead requirement
             const isWarehouse = meetingLocation.trim().toLowerCase() === 'warehouse';
             if (isWarehouse && !lead) {
-                if (leadSelect) {
-                    leadSelect.setCustomValidity('Please select a Lead when Meeting Location is Warehouse.');
-                    leadSelect.reportValidity();
-                }
+                alert('Please select a Lead when Meeting Location is Warehouse.');
                 return;
-            } else if (leadSelect) {
-                leadSelect.setCustomValidity('');
             }
 
             // Validate time conflict
@@ -1192,17 +1563,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const staffCheckboxes = document.querySelectorAll('.edit-staff-checkbox:checked');
             const selectedStaffIds = Array.from(staffCheckboxes).map(cb => cb.value);
+            if (lead && !selectedStaffIds.includes(lead)) {
+                selectedStaffIds.push(lead);
+            }
 
-            const existingStaffMembers = Array.isArray(currentShift.staffMembers) ? currentShift.staffMembers : [];
-            const updatedStaffMembers = selectedStaffIds.map(staffId => {
-                const existing = existingStaffMembers.find(m => {
+            const existingMembers = Array.isArray(currentShift.members) ? currentShift.members : (Array.isArray(currentShift.staffMembers) ? currentShift.staffMembers : []);
+            const updatedMembers = selectedStaffIds.map(staffId => {
+                const existing = existingMembers.find(m => {
                     const sid = typeof m === 'string' ? m : (m && (m.id || m.uid));
                     return sid === staffId;
                 });
+
+                const newRole = (staffId === lead) ? 'Lead' : 'Event Staff';
+
                 if (existing && typeof existing === 'object') {
-                    return existing;
+                    return { ...existing, role: existing.role && existing.role !== 'Event Staff' && staffId !== lead ? existing.role : newRole };
                 }
-                return { id: staffId, status: 'pending' };
+                return { id: staffId, status: 'pending', role: newRole };
             });
 
             let dateTimeVal = null;
@@ -1217,27 +1594,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     dateString: date || null,
                     startTimeString: startTime || null,
                     meetingLocation,
-                    role: typeVal,
+                    role: role,
+                    eventTypes: eventTypesMap,
+                    eventsList: events,
                     status,
                     assignedUserId: lead || null,
-                    staffMembers: updatedStaffMembers,
+                    members: updatedMembers,
                     staff: selectedStaffIds,
                     notes: editShiftNotes,
                     updatedAt: serverTimestamp()
                 };
 
-                if (currentShift.eventTypes && typeof currentShift.eventTypes === 'object') {
-                    const updatedEventTypes = { ...currentShift.eventTypes };
-                    if (eventName) {
-                        eventName.split(',').map(s => s.trim()).filter(Boolean).forEach(ev => {
-                            updatedEventTypes[ev] = typeVal;
-                        });
-                    }
-                    updatePayload.eventTypes = updatedEventTypes;
-                }
-
                 await updateDoc(doc(db, "shifts", id), updatePayload);
-                
+
                 const modalEl = document.getElementById('editShiftModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
@@ -1254,11 +1623,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!shiftToDeleteId) return;
             try {
                 await deleteDoc(doc(db, "shifts", shiftToDeleteId));
-                
+
                 const modalEl = document.getElementById('deleteShiftModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
-                
+
                 shiftToDeleteId = null;
             } catch (error) {
                 console.error("Error deleting shift:", error);
@@ -1277,7 +1646,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchRolesAndUsers();
         }
 
-        const isAll = targetShiftId === 'ALL_UNCONFIRMED';
+        const isAll = targetShiftId === 'ALL_SCHEDULED';
         const targetTitle = document.getElementById('pushTargetTitle');
         const targetSubtitle = document.getElementById('pushTargetSubtitle');
         const shiftIdInput = document.getElementById('pushNotificationShiftId');
@@ -1293,25 +1662,44 @@ document.addEventListener('DOMContentLoaded', () => {
         let defaultTitle = 'Shift Confirmation Reminder';
         let defaultBody = '';
 
+        const isMemberUnconfirmed = (shift, uid) => {
+            const arr = shift.members || shift.staffMembers || [];
+            if (Array.isArray(arr)) {
+                const member = arr.find(m => {
+                    if (!m) return false;
+                    const id = m.id || m.uid || m.userId || m.employeeId || m.staffId;
+                    return String(id).trim() === String(uid).trim();
+                });
+                if (member && (member.status || '').toLowerCase() === 'confirmed') {
+                    return false;
+                }
+            }
+            return true;
+        };
+
         if (isAll) {
-            const unconfirmedShifts = allShifts.filter(s => (s.status || '').toLowerCase() === 'unconfirmed');
+            const unconfirmedShifts = allShifts.filter(s => (s.status || '').toLowerCase() === 'scheduled');
             unconfirmedShifts.forEach(shift => {
-                if (shift.assignedUserId) targetUserIds.add(shift.assignedUserId);
-                if (Array.isArray(shift.staffMembers)) {
+                if (shift.assignedUserId && isMemberUnconfirmed(shift, shift.assignedUserId)) targetUserIds.add(shift.assignedUserId);
+                if (Array.isArray(shift.members)) {
+                    shift.members.forEach(m => {
+                        if (m && m.id && isMemberUnconfirmed(shift, m.id)) targetUserIds.add(m.id);
+                    });
+                } else if (Array.isArray(shift.staffMembers)) {
                     shift.staffMembers.forEach(m => {
-                        if (m && m.id) targetUserIds.add(m.id);
+                        if (m && m.id && isMemberUnconfirmed(shift, m.id)) targetUserIds.add(m.id);
                     });
                 }
                 if (Array.isArray(shift.staff)) {
                     shift.staff.forEach(id => {
-                        if (id) targetUserIds.add(id);
+                        if (id && isMemberUnconfirmed(shift, id)) targetUserIds.add(id);
                     });
                 }
             });
 
-            if (targetTitle) targetTitle.textContent = `Targeting: All Unconfirmed Shifts (${unconfirmedShifts.length} shifts)`;
-            if (targetSubtitle) targetSubtitle.textContent = 'Sending notification to all users assigned to unconfirmed shifts.';
-            defaultBody = 'You have one or more unconfirmed shifts scheduled. Please open the Vancouver PartyWorks app to review and confirm your availability.';
+            if (targetTitle) targetTitle.textContent = `Targeting: All Scheduled Shifts (${unconfirmedShifts.length} shifts)`;
+            if (targetSubtitle) targetSubtitle.textContent = 'Sending notification to all users assigned to scheduled shifts.';
+            defaultBody = 'You have one or more scheduled shifts. Please open the Vancouver PartyWorks app to review and confirm your availability.';
         } else {
             const targetShift = allShifts.find(s => s.id === targetShiftId);
             const venue = targetShift ? (targetShift.venueName || 'Upcoming Event') : 'Shift';
@@ -1327,22 +1715,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (targetShift) {
-                if (targetShift.assignedUserId) targetUserIds.add(targetShift.assignedUserId);
-                if (Array.isArray(targetShift.staffMembers)) {
+                if (targetShift.assignedUserId && isMemberUnconfirmed(targetShift, targetShift.assignedUserId)) targetUserIds.add(targetShift.assignedUserId);
+                if (Array.isArray(targetShift.members)) {
+                    targetShift.members.forEach(m => {
+                        if (m && m.id && isMemberUnconfirmed(targetShift, m.id)) targetUserIds.add(m.id);
+                    });
+                } else if (Array.isArray(targetShift.staffMembers)) {
                     targetShift.staffMembers.forEach(m => {
-                        if (m && m.id) targetUserIds.add(m.id);
+                        if (m && m.id && isMemberUnconfirmed(targetShift, m.id)) targetUserIds.add(m.id);
                     });
                 }
                 if (Array.isArray(targetShift.staff)) {
                     targetShift.staff.forEach(id => {
-                        if (id) targetUserIds.add(id);
+                        if (id && isMemberUnconfirmed(targetShift, id)) targetUserIds.add(id);
                     });
                 }
             }
 
             if (targetTitle) targetTitle.textContent = `Targeting: ${venue}`;
             if (targetSubtitle) targetSubtitle.textContent = `Date: ${dateDisplay} | Meeting Location: ${targetShift ? (targetShift.meetingLocation || 'N/A') : 'N/A'}`;
-            defaultBody = `You have an unconfirmed shift at ${venue} on ${dateDisplay}. Please open the PartyWorks app to confirm your shift.`;
+            defaultBody = `You have a scheduled shift at ${venue} on ${dateDisplay}. Please open the PartyWorks app to confirm your shift.`;
         }
 
         if (titleInput) titleInput.value = defaultTitle;
@@ -1380,7 +1772,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPushRecipients.forEach(user => {
                     const row = document.createElement('div');
                     row.className = 'd-flex justify-content-between align-items-center p-2 mb-1 rounded border bg-white';
-                    
+
                     const name = user.displayName || user.email || user.phoneNumber || user.id;
                     const role = user.displayRole || user.role || 'Staff';
                     const contact = user.email || user.phoneNumber || 'No contact info';
@@ -1408,12 +1800,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const notifyUnconfirmedBtn = document.getElementById('notifyUnconfirmedBtn');
-    if (notifyUnconfirmedBtn) {
-        notifyUnconfirmedBtn.addEventListener('click', () => {
-            openPushNotificationModal('ALL_UNCONFIRMED');
-        });
-    }
 
     function showNotificationToast(msg, isSuccess = true) {
         const toastEl = document.getElementById('pushNotificationToast');
@@ -1446,9 +1832,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const recipientIds = currentPushRecipients.map(u => u.id);
-                const isAll = shiftId === 'ALL_UNCONFIRMED';
+                const isAll = shiftId === 'ALL_SCHEDULED';
                 const targetShift = !isAll ? allShifts.find(s => s.id === shiftId) : null;
-                const venueName = isAll ? 'All Unconfirmed Shifts' : (targetShift ? (targetShift.venueName || 'Shift') : 'Shift Reminder');
+                const venueName = isAll ? 'All Scheduled Shifts' : (targetShift ? (targetShift.venueName || 'Shift') : 'Shift Reminder');
 
                 // 1. Create document in pushNotifications collection (triggers Cloud Function for FCM delivery)
                 await addDoc(collection(db, "pushNotifications"), {
@@ -1500,4 +1886,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadShifts();
+
+    // Search functionality for Leads and Staff
+    function attachSearchListener(searchInputId, containerId) {
+        const searchInput = document.getElementById(searchInputId);
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value.toLowerCase();
+                const container = document.getElementById(containerId);
+                if (container) {
+                    const rows = container.querySelectorAll('.item-row');
+                    let anyVisible = false;
+                    rows.forEach(row => {
+                        const nameLabel = row.querySelector('.item-name');
+                        if (nameLabel) {
+                            const nameText = nameLabel.textContent.toLowerCase();
+                            if (nameText.includes(query)) {
+                                row.classList.remove('d-none');
+                                anyVisible = true;
+                            } else {
+                                row.classList.add('d-none');
+                            }
+                        }
+                    });
+
+                    let noResultsMsg = container.querySelector('.no-results-msg');
+                    if (!anyVisible && rows.length > 0) {
+                        if (!noResultsMsg) {
+                            noResultsMsg = document.createElement('div');
+                            noResultsMsg.className = 'text-muted small text-center py-2 no-results-msg';
+                            noResultsMsg.textContent = 'No results found';
+                            container.appendChild(noResultsMsg);
+                        }
+                    } else if (noResultsMsg) {
+                        noResultsMsg.remove();
+                    }
+                }
+            });
+        }
+    }
+
+    attachSearchListener('shiftLeadSearch', 'shiftLeadContainer');
+    attachSearchListener('shiftStaffSearch', 'shiftStaffContainer');
+    attachSearchListener('editShiftLeadSearch', 'editShiftLeadContainer');
+    attachSearchListener('editShiftStaffSearch', 'editShiftStaffContainer');
 });

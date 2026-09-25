@@ -142,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     isHr = currentUserRoleName.toLowerCase() === 'hr' || currentUserRoleId === 2;
                     isSuperAdmin = isSuperAdminLocal || isHr;
                     
+                    // UI Elements
                     const pageSubtitle = document.getElementById('pageSubtitle');
                     const tableTitle = document.getElementById('tableTitle');
                     if (pageSubtitle) {
@@ -166,7 +167,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let allUsers = [];
     let allDashboardUsers = [];
+    
+    let currentPage = 1;
+    const pageSize = 10;
     const searchInput = document.getElementById('searchUserInput');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const paginationControls = document.getElementById('paginationControls');
 
     function renderUsersTable() {
         const searchTerm = (searchInput ? searchInput.value : '').toLowerCase();
@@ -199,20 +205,34 @@ document.addEventListener('DOMContentLoaded', () => {
             actionHeader.style.display = isSuperAdmin ? '' : 'none';
         }
 
-        if (combined.length === 0) {
-            usersTableBody.innerHTML = `<tr><td colspan="${isSuperAdmin ? 5 : 4}" class="text-center py-4 text-muted">No users found.</td></tr>`;
+        const totalItems = combined.length;
+        const totalPages = Math.ceil(totalItems / pageSize) || 1;
+        
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        if (totalItems === 0) {
+            usersTableBody.innerHTML = `<tr><td colspan="${isSuperAdmin ? 4 : 3}" class="text-center py-4 text-muted">No users found.</td></tr>`;
+            if (paginationInfo) paginationInfo.textContent = 'Showing 0 of 0 users';
+            if (paginationControls) paginationControls.innerHTML = '';
             return;
         }
 
-        combined.forEach(user => {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalItems);
+        const pageUsers = combined.slice(startIndex, endIndex);
+
+        if (paginationInfo) {
+            paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} users`;
+        }
+
+        pageUsers.forEach(user => {
             const contactInfo = user.email || user.phoneNumber || 'N/A';
-            const roleIdForStatus = user.roleId;
-            const activeStatusDisplay = (roleIdForStatus === 1 || roleIdForStatus === 2 || roleIdForStatus === 3 || roleIdForStatus === 6) ? 'N/A' : (user.activeStatus || 'onDuty');
 
             const currentRoleObj = availableRoles.find(r => r.id === user.roleId || r.name === user.role);
             const targetRoleId = typeof user.roleId === 'number' ? user.roleId : (currentRoleObj ? currentRoleObj.id : null);
             
-            const isRestrictedTargetRole = (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3);
+            const isRestrictedTargetRole = (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3 || targetRoleId === 6);
             const canEditOrDeleteUser = isSuperAdminLocal || (isHr && !isRestrictedTargetRole);
 
             let actionCell = '';
@@ -226,8 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 data-name="${user.displayName || ''}"
                                 data-phone="${user.phoneNumber || ''}"
                                 data-role="${user.displayRole}"
-                                data-role-id="${targetRoleId || ''}"
-                                data-status="${activeStatusDisplay}">
+                                data-role-id="${targetRoleId || ''}">
                                 <i class="ti ti-edit"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-danger delete-user-btn ms-1"
@@ -247,15 +266,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${user.displayName || 'N/A'}</td>
                 <td>${contactInfo}</td>
                 <td>${user.displayRole}</td>
-                <td>${activeStatusDisplay}</td>
                 ${actionCell}
             `;
             usersTableBody.appendChild(tr);
         });
+        
+        renderPaginationControls(totalPages);
+    }
+
+    function renderPaginationControls(totalPages) {
+        if (typeof paginationControls === 'undefined' || !paginationControls) return;
+        paginationControls.innerHTML = '';
+
+        // Previous Button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+        prevLi.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                renderUsersTable();
+            }
+        });
+        paginationControls.appendChild(prevLi);
+
+        // Page Numbers
+        for (let p = 1; p <= totalPages; p++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${p === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+            li.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage !== p) {
+                    currentPage = p;
+                    renderUsersTable();
+                }
+            });
+            paginationControls.appendChild(li);
+        }
+
+        // Next Button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+        nextLi.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderUsersTable();
+            }
+        });
+        paginationControls.appendChild(nextLi);
     }
 
     if (searchInput) {
-        searchInput.addEventListener('input', renderUsersTable);
+        searchInput.addEventListener('input', () => {
+            currentPage = 1;
+            renderUsersTable();
+        });
     }
 
     function loadUsers() {
@@ -401,8 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const deleteBtn = e.target.closest('.delete-user-btn');
         if (deleteBtn) {
             const targetRoleId = parseInt(deleteBtn.dataset.roleId, 10);
-            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3)) {
-                alert("HR is restricted from deleting users with Super Admin, HR, or Accountant roles.");
+            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3 || targetRoleId === 6)) {
+                alert("HR is restricted from deleting users with Super Admin, HR, Accountant, or Spectator roles.");
                 return;
             }
             userToDeleteId = deleteBtn.dataset.id;
@@ -415,8 +484,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.closest('.edit-user-btn');
         if (btn) {
             const targetRoleId = parseInt(btn.dataset.roleId, 10);
-            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3)) {
-                alert("HR is restricted from editing users with Super Admin, HR, or Accountant roles.");
+            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3 || targetRoleId === 6)) {
+                alert("HR is restricted from editing users with Super Admin, HR, Accountant, or Spectator roles.");
                 return;
             }
             document.getElementById('editUserId').value = btn.dataset.id;
@@ -446,18 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 roleSelect.value = optVal;
             }
 
-            const statusSelect = document.getElementById('editUserStatus');
-            const currentStatus = btn.dataset.status || 'onDuty';
-            const matchedStatusOpt = Array.from(statusSelect.options).find(opt => opt.value.toLowerCase() === currentStatus.toLowerCase() || opt.textContent.trim().toLowerCase() === currentStatus.trim().toLowerCase());
-            if (matchedStatusOpt) {
-                statusSelect.value = matchedStatusOpt.value;
-            } else {
-                if (!Array.from(statusSelect.options).some(opt => opt.value === currentStatus)) {
-                    statusSelect.add(new Option(currentStatus, currentStatus));
-                }
-                statusSelect.value = currentStatus;
-            }
-
             const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
             modal.show();
         }
@@ -474,7 +531,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const editRoleSelect = document.getElementById('editUserRole');
             const selectedVal = editRoleSelect.value;
             const parsedRoleId = parseInt(selectedVal, 10);
-            const activeStatus = document.getElementById('editUserStatus').value;
 
             const targetUser = [...allUsers, ...allDashboardUsers].find(u => u.id === id);
             const targetRoleObj = targetUser ? availableRoles.find(r => r.id === targetUser.roleId || r.name === targetUser.role) : null;
@@ -492,12 +548,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const roleName = roleObj ? roleObj.name : (editRoleSelect.options[editRoleSelect.selectedIndex]?.textContent || selectedVal);
 
             if (isHr && !isSuperAdminLocal) {
-                if (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3) {
-                    alert("HR is restricted from editing users with Super Admin, HR, or Accountant roles.");
+                if (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3 || targetRoleId === 6) {
+                    alert("HR is restricted from editing users with Super Admin, HR, Accountant, or Spectator roles.");
                     return;
                 }
-                if (roleId === 1 || roleId === 2 || roleId === 3) {
-                    alert("HR is restricted from assigning Super Admin, HR, or Accountant roles.");
+                if (roleId === 1 || roleId === 2 || roleId === 3 || roleId === 6) {
+                    alert("HR is restricted from assigning Super Admin, HR, Accountant, or Spectator roles.");
                     return;
                 }
             }
@@ -505,7 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const updateData = {
                     displayName,
-                    activeStatus,
                     updatedAt: serverTimestamp()
                 };
                 if (roleId !== null && !isNaN(roleId)) {
@@ -537,8 +592,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetRoleObj = targetUser ? availableRoles.find(r => r.id === targetUser.roleId || r.name === targetUser.role) : null;
             const targetRoleId = targetUser ? (typeof targetUser.roleId === 'number' ? targetUser.roleId : (targetRoleObj ? targetRoleObj.id : null)) : null;
 
-            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3)) {
-                alert("HR is restricted from deleting users with Super Admin, HR, or Accountant roles.");
+            if (isHr && !isSuperAdminLocal && (targetRoleId === 1 || targetRoleId === 2 || targetRoleId === 3 || targetRoleId === 6)) {
+                alert("HR is restricted from deleting users with Super Admin, HR, Accountant, or Spectator roles.");
                 return;
             }
 

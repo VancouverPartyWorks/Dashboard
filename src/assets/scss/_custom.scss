@@ -186,3 +186,23 @@ footer {
 		border-radius: 4px;
 	}
 }
+// Custom placeholder for shift search inputs
+#shiftLeadSearch::placeholder,
+#shiftStaffSearch::placeholder,
+#editShiftLeadSearch::placeholder,
+#editShiftStaffSearch::placeholder {
+	color: #ced4da;
+	font-weight: 400;
+}
+
+.form-label {
+	font-weight: 500;
+}
+
+// Disable active state for unclickable notification items
+.dropdown-item.notification-item {
+    &:active, &:focus {
+        background-color: transparent;
+        color: inherit;
+    }
+}
