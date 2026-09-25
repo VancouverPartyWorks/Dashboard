@@ -220,7 +220,12 @@
                   <input type="date" class="form-control" id="shiftDate" required>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Events & Types</label>
+                  <div class="d-flex align-items-center mb-1">
+                    <label class="form-label mb-0">Events & Types</label>
+                    <button type="button" class="btn btn-sm btn-link p-0 text-secondary ms-2" id="refreshEventsBtn" title="Refresh Events">
+                      <i class="ti ti-refresh fs-5"></i>
+                    </button>
+                  </div>
                   <div class="border rounded p-2 bg-light-subtle" id="shiftEventContainer"
                     style="max-height: 180px; overflow-y: auto;">
                     <div class="text-muted small py-2 text-center">Please select a date to view events.</div>

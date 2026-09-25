@@ -49,6 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (createShiftBtn && canManageShifts) {
                         createShiftBtn.classList.remove('d-none');
                     }
+                    
+                    if (canManageShifts) {
+                        // Preload events and users for the create shift dialog
+                        fetchIOEvents();
+                        if (allUsersList.length === 0) {
+                            fetchRolesAndUsers();
+                        }
+                    }
 
                     // Re-render table if shifts are already loaded
                     if (allShifts.length > 0) {
@@ -61,65 +69,82 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let fetchRolesAndUsersPromise = null;
     async function fetchRolesAndUsers() {
         if (!db) return;
-        try {
-            const rolesSnap = await getDocs(collection(db, "userRoles"));
-            availableRoles = rolesSnap.docs.map(doc => ({ id: doc.data().id, name: doc.data().name }));
+        if (!fetchRolesAndUsersPromise) {
+            fetchRolesAndUsersPromise = (async () => {
+                try {
+                    const rolesSnap = await getDocs(collection(db, "userRoles"));
+                    availableRoles = rolesSnap.docs.map(doc => ({ id: doc.data().id, name: doc.data().name }));
 
-            const usersSnap = await getDocs(collection(db, "users"));
-            const dUsersSnap = await getDocs(collection(db, "dashboardUsers"));
+                    const usersSnap = await getDocs(collection(db, "users"));
+                    const dUsersSnap = await getDocs(collection(db, "dashboardUsers"));
 
-            allUsersList = [];
-            usersSnap.forEach(d => allUsersList.push({ id: d.id, ...d.data() }));
-            dUsersSnap.forEach(d => allUsersList.push({ id: d.id, ...d.data() }));
+                    const newUsersList = [];
+                    usersSnap.forEach(d => newUsersList.push({ id: d.id, ...d.data() }));
+                    dUsersSnap.forEach(d => newUsersList.push({ id: d.id, ...d.data() }));
 
-            allUsersList.forEach(user => {
-                const currentRoleObj = availableRoles.find(r => r.id === user.roleId || r.name === user.role);
-                user.displayRole = currentRoleObj ? currentRoleObj.name : (user.role || 'User');
-            });
-        } catch (e) {
-            console.error("Error fetching users/roles", e);
+                    newUsersList.forEach(user => {
+                        const currentRoleObj = availableRoles.find(r => r.id === user.roleId || r.name === user.role);
+                        user.displayRole = currentRoleObj ? currentRoleObj.name : (user.role || 'User');
+                    });
+                    
+                    allUsersList = newUsersList;
+                } catch (e) {
+                    console.error("Error fetching users/roles", e);
+                } finally {
+                    fetchRolesAndUsersPromise = null;
+                }
+            })();
         }
+        await fetchRolesAndUsersPromise;
     }
 
     let cachedIOLeads = null;
+    let fetchIOEventsPromise = null;
 
     async function fetchIOEvents() {
         const container = document.getElementById('shiftEventContainer');
         if (cachedIOLeads === null) {
-            const apiKey = import.meta.env.VITE_IO_API_KEY;
-            const apiUrl = `/io-api/leads/?apiKey=${apiKey}&limit=250&_body=true`;
-            console.log("Fetching IO Events from URL:", apiUrl);
+            if (!fetchIOEventsPromise) {
+                fetchIOEventsPromise = (async () => {
+                    const apiKey = import.meta.env.VITE_IO_API_KEY;
+                    const apiUrl = `/io-api/leads/?apiKey=${apiKey}&limit=250&_body=true`;
+                    console.log("Fetching IO Events from URL:", apiUrl);
 
-            if (container) {
-                container.innerHTML = '<div class="text-muted small">Loading events...</div>';
-            }
-            try {
-                const res = await fetch(apiUrl);
-                if (!res.ok) {
-                    if (res.status === 403) {
-                        throw new Error("API Key permissions restricted. Admin must enable Leads.");
+                    if (container) {
+                        container.innerHTML = '<div class="text-muted small">Loading events...</div>';
                     }
-                    throw new Error(`API error: ${res.status}`);
-                }
-                const data = await res.json();
-                console.log("API Response Data:", data);
+                    try {
+                        const res = await fetch(apiUrl);
+                        if (!res.ok) {
+                            if (res.status === 403) {
+                                throw new Error("API Key permissions restricted. Admin must enable Leads.");
+                            }
+                            throw new Error(`API error: ${res.status}`);
+                        }
+                        const data = await res.json();
+                        console.log("API Response Data:", data);
 
-                let leads = [];
-                if (Array.isArray(data)) leads = data;
-                else if (data.items && Array.isArray(data.items)) leads = data.items;
-                else if (data.data && Array.isArray(data.data)) leads = data.data;
-                else if (typeof data === 'object') leads = Object.values(data);
+                        let leads = [];
+                        if (Array.isArray(data)) leads = data;
+                        else if (data.items && Array.isArray(data.items)) leads = data.items;
+                        else if (data.data && Array.isArray(data.data)) leads = data.data;
+                        else if (typeof data === 'object') leads = Object.values(data);
 
-                cachedIOLeads = leads.filter(l => l && typeof l === 'object' && l.id);
-            } catch (error) {
-                console.error("Error fetching IO events:", error);
-                if (container) {
-                    container.innerHTML = `<div class="text-danger small">Failed to load events: ${error.message}</div>`;
-                }
-                return;
+                        cachedIOLeads = leads.filter(l => l && typeof l === 'object' && l.id);
+                    } catch (error) {
+                        console.error("Error fetching IO events:", error);
+                        if (container) {
+                            container.innerHTML = `<div class="text-danger small">Failed to load events: ${error.message}</div>`;
+                        }
+                    } finally {
+                        fetchIOEventsPromise = null;
+                    }
+                })();
             }
+            await fetchIOEventsPromise;
         }
         renderEventOptions();
     }
@@ -252,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '';
         validLeads.forEach(lead => {
             const id = `event_${lead.id || Math.random().toString(36).substr(2, 9)}`;
-            const displayName = lead.eventname || lead.eventorganization || `Lead #${lead.id}`;
+            const displayName = lead.eventorganization || lead.eventname || `Lead #${lead.id}`;
 
             // Check existing shifts on selectedDate for this event
             const existingShifts = allShifts.filter(shift => {
@@ -330,6 +355,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (shiftStartTimeInput) {
         shiftStartTimeInput.addEventListener('input', validateShiftStartTime);
         shiftStartTimeInput.addEventListener('change', validateShiftStartTime);
+    }
+
+    const refreshEventsBtn = document.getElementById('refreshEventsBtn');
+    if (refreshEventsBtn) {
+        refreshEventsBtn.addEventListener('click', async () => {
+            const icon = refreshEventsBtn.querySelector('i');
+            if (icon) icon.classList.add('text-primary');
+            cachedIOLeads = null;
+            fetchIOEventsPromise = null;
+            await fetchIOEvents();
+            if (icon) icon.classList.remove('text-primary');
+        });
     }
 
     const searchInput = document.getElementById('searchShiftInput');
@@ -435,11 +472,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateShiftStatusAlert(shifts) {
+    function updateShiftStatusAlert(shifts, isTomorrow = true, targetDateStr = '') {
         const container = document.getElementById('shiftStatusAlertContainer');
         const alertDiv = document.getElementById('shiftStatusAlert');
         const icon = document.getElementById('shiftStatusAlertIcon');
         const messageSpan = document.getElementById('shiftStatusAlertMessage');
+
+        let displayDate = "";
+        if (!isTomorrow && targetDateStr) {
+            const parts = targetDateStr.split('-');
+            if (parts.length === 3) {
+                displayDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+        }
 
         if (!container || !alertDiv || !icon || !messageSpan) return;
 
@@ -480,18 +525,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (totalStaff === 0) {
             alertDiv.classList.add('alert-secondary', 'bg-secondary-subtle', 'text-secondary', 'border-secondary-subtle');
             icon.className = 'ti ti-info-circle fs-4';
-            messageSpan.innerHTML = '<strong>Tomorrow\'s shifts</strong> have no staff assigned yet.';
+            if (isTomorrow) {
+                messageSpan.innerHTML = '<strong>Tomorrow\'s shifts</strong> have no staff assigned yet.';
+            } else {
+                messageSpan.innerHTML = `<strong>Shifts for ${displayDate}</strong> have no staff assigned yet.`;
+            }
         } else if (rejectedCount === 0 && notRespondedCount === 0) {
             alertDiv.classList.add('alert-success', 'bg-success-subtle', 'text-success', 'border-success-subtle');
             icon.className = 'ti ti-check fs-4';
-            messageSpan.innerHTML = '<strong>Everyone\'s in!</strong> All set for tomorrow.';
+            if (isTomorrow) {
+                messageSpan.innerHTML = '<strong>Everyone\'s in!</strong> All set for tomorrow.';
+            } else {
+                messageSpan.innerHTML = `<strong>Everyone's all set for ${displayDate}</strong>.`;
+            }
         } else {
             alertDiv.classList.add('alert-warning', 'bg-warning-subtle', 'text-warning-emphasis', 'border-warning-subtle');
             icon.className = 'ti ti-alert-triangle fs-4';
             let parts = [];
             if (rejectedCount > 0) parts.push(`<strong>${rejectedCount} staff rejected</strong>`);
-            if (notRespondedCount > 0) parts.push(`<strong>${notRespondedCount} staff not responded</strong>`);
-            messageSpan.innerHTML = `Attention: ${parts.join(' and ')} for tomorrow's shift(s). Please kindly assign new ones.`;
+            if (notRespondedCount > 0) parts.push(`<strong>${notRespondedCount} staff members not responded</strong>`);
+
+            if (isTomorrow) {
+                messageSpan.innerHTML = `Attention: ${parts.join(' and ')} for tomorrow's shift(s). Please follow up with them, or reassign if needed.`;
+            } else {
+                messageSpan.innerHTML = `Attention: ${parts.join(' and ')} for ${displayDate} shift(s). Please follow up with them, or reassign if needed.`;
+            }
         }
     }
 
@@ -533,12 +591,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const dd = String(tmrw.getDate()).padStart(2, '0');
         const tomorrowDateStr = `${yyyy}-${mm}-${dd}`;
 
-        const tomorrowShifts = allShifts.filter(shift => {
+        let targetDateStr = tomorrowDateStr;
+        let isTomorrow = true;
+
+        if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
+            targetDateStr = currentFilterDate;
+            isTomorrow = currentFilterDate === tomorrowDateStr;
+        }
+
+        const alertShifts = allShifts.filter(shift => {
             const info = getShiftDateAndTime(shift);
-            return info.dateStr === tomorrowDateStr;
+            return info.dateStr === targetDateStr;
         });
 
-        updateShiftStatusAlert(tomorrowShifts);
+        updateShiftStatusAlert(alertShifts, isTomorrow, targetDateStr);
 
         const totalItems = filteredShifts.length;
         const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -663,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             shiftsTableBody.appendChild(tr);
         });
-        
+
         renderPaginationControls(totalPages);
     }
 
@@ -900,11 +966,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 staffContainer.innerHTML = '<div class="text-muted small">No staff available</div>';
             }
         });
+
+        addShiftModalEl.addEventListener('hidden.bs.modal', () => {
+            if (addShiftForm) addShiftForm.reset();
+            const shiftDateInput = document.getElementById('shiftDate');
+            if (shiftDateInput) shiftDateInput.setCustomValidity('');
+            validateShiftStartTime();
+            const locationInput = document.getElementById('shiftMeetingLocation');
+            if (locationInput) locationInput.value = 'Warehouse';
+            createShiftNotes = [];
+            renderCreateShiftNotes();
+            updateLeadRequirement();
+
+            const eventContainer = document.getElementById('shiftEventContainer');
+            if (eventContainer) {
+                eventContainer.innerHTML = '<div class="text-muted small py-2 text-center">Please select a date to view events.</div>';
+            }
+
+            const leadSearch = document.getElementById('shiftLeadSearch');
+            if (leadSearch) leadSearch.value = '';
+
+            const staffSearch = document.getElementById('shiftStaffSearch');
+            if (staffSearch) staffSearch.value = '';
+
+            const leadContainer = document.getElementById('shiftLeadContainer');
+            if (leadContainer) leadContainer.innerHTML = '<div class="text-muted small">Loading leads...</div>';
+
+            const staffContainer = document.getElementById('shiftStaffContainer');
+            if (staffContainer) staffContainer.innerHTML = '<div class="text-muted small">Loading staff...</div>';
+        });
     }
 
     if (addShiftForm) {
         addShiftForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = addShiftForm.querySelector('button[type="submit"]');
+            let originalBtnText = '';
+            if (submitBtn) {
+                originalBtnText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving...';
+            }
+
             const date = document.getElementById('shiftDate').value;
             const eventCheckboxes = document.querySelectorAll('.event-checkbox:checked');
             if (eventCheckboxes.length === 0) {
@@ -918,6 +1021,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         shiftDateInput.setCustomValidity('Please select a date with available events.');
                         shiftDateInput.reportValidity();
                     }
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
                 }
                 return;
             }
@@ -944,6 +1051,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isWarehouse && !lead) {
                 alert('Please select a Lead when Meeting Location is Warehouse.');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                }
                 return;
             }
 
@@ -952,6 +1063,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (timeInput) {
                     timeInput.reportValidity();
                     timeInput.focus();
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
                 }
                 return;
             }
@@ -1061,6 +1176,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error adding shift: ", error);
                 alert("Failed to add shift.");
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                }
             }
         });
     }
