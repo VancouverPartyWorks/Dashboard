@@ -948,8 +948,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     leadContainer.appendChild(div);
                 }
                 const rId = parseInt(user.roleId, 10);
-                // Only show users with roleId 5 in the staff list
-                if (rId === 5 && !assignedLeads.has(user.id) && !assignedStaff.has(user.id)) {
+                // Show users with roleId 5 or leads in the staff list
+                if ((rId === 5 || isLead) && !assignedLeads.has(user.id) && !assignedStaff.has(user.id)) {
                     const div = document.createElement('div');
                     div.className = 'd-flex justify-content-between align-items-center mb-2 item-row';
                     div.innerHTML = `
@@ -1408,7 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rId = parseInt(user.roleId, 10);
                     const roleName = (user.displayRole || user.role || '').toLowerCase();
                     const isLead = roleName.includes('lead');
-                    const isStaff = (rId === 5 || roleName.includes('staff') || currentStaffIds.has(uid)) && !isLead;
+                    const isStaff = (rId === 5 || roleName.includes('staff') || currentStaffIds.has(uid) || isLead);
 
                     if (isStaff && !staffUsersMap.has(uid)) {
                         staffUsersMap.set(uid, user);
@@ -1453,10 +1453,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const div = document.createElement('div');
-                    div.className = 'd-flex justify-content-between align-items-center mb-2 item-row';
+                    const isCurrentLead = (uid === currentLeadId);
+                    const displayClass = isCurrentLead ? 'd-none' : 'd-flex';
+                    div.className = `${displayClass} justify-content-between align-items-center mb-2 item-row`;
                     div.innerHTML = `
                       <label class="form-check-label item-name" for="edit_staff_${uid}">${displayName}</label>
-                      <input class="form-check-input edit-staff-checkbox" type="checkbox" value="${uid}" id="edit_staff_${uid}" ${isChecked ? 'checked' : ''}>
+                      <input class="form-check-input edit-staff-checkbox" type="checkbox" value="${uid}" id="edit_staff_${uid}" ${isChecked && !isCurrentLead ? 'checked' : ''}>
                     `;
                     const cb = div.querySelector('.edit-staff-checkbox');
                     if (cb && isChecked) {
@@ -2051,4 +2053,33 @@ document.addEventListener('DOMContentLoaded', () => {
     attachSearchListener('shiftStaffSearch', 'shiftStaffContainer');
     attachSearchListener('editShiftLeadSearch', 'editShiftLeadContainer');
     attachSearchListener('editShiftStaffSearch', 'editShiftStaffContainer');
+
+    // Helper to handle staff visibility based on lead selection
+    function handleLeadSelectionForStaff(leadContainerId, staffContainerId) {
+        const leadContainer = document.getElementById(leadContainerId);
+        const staffContainer = document.getElementById(staffContainerId);
+        if (!leadContainer || !staffContainer) return;
+
+        leadContainer.addEventListener('change', (e) => {
+            if (e.target.type === 'radio') {
+                const selectedLeadId = e.target.value;
+                const staffCheckboxes = staffContainer.querySelectorAll('input[type="checkbox"]');
+                staffCheckboxes.forEach(checkbox => {
+                    const row = checkbox.closest('.item-row');
+                    if (!row) return;
+                    if (checkbox.value === selectedLeadId) {
+                        row.classList.remove('d-flex');
+                        row.classList.add('d-none');
+                        checkbox.checked = false;
+                    } else {
+                        row.classList.remove('d-none');
+                        row.classList.add('d-flex');
+                    }
+                });
+            }
+        });
+    }
+
+    handleLeadSelectionForStaff('shiftLeadContainer', 'shiftStaffContainer');
+    handleLeadSelectionForStaff('editShiftLeadContainer', 'editShiftStaffContainer');
 });
