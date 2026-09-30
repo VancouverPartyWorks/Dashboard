@@ -110,7 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!fetchIOEventsPromise) {
                 fetchIOEventsPromise = (async () => {
                     const apiKey = import.meta.env.VITE_IO_API_KEY;
-                    const apiUrl = `/io-api/leads/?apiKey=${apiKey}&limit=250&_body=true`;
+                    const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '/io-api' : 'https://rental.software/api6';
+                    const apiUrl = `${baseUrl}/leads/?apiKey=${apiKey}&limit=250&_body=true`;
                     console.log("Fetching IO Events from URL:", apiUrl);
 
                     if (container) {

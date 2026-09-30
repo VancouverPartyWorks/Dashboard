@@ -111,7 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const apiKey = import.meta.env.VITE_IO_API_KEY;
         if (!apiKey) return;
         try {
-            const res = await fetch(`/io-api/leads/?apiKey=${apiKey}&limit=250`);
+            const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '/io-api' : 'https://rental.software/api6';
+            const res = await fetch(`${baseUrl}/leads/?apiKey=${apiKey}&limit=250`);
             if (res.ok) {
                 const data = await res.json();
                 let leads = [];
@@ -1014,7 +1015,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const cleanName = ev.primaryName.replace(/[^\w\s]/gi, '').trim();
-            const res = await fetch(`/io-api/leads/?apiKey=${apiKey}&search=${encodeURIComponent(cleanName)}&_body=true`);
+            const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '/io-api' : 'https://rental.software/api6';
+            const res = await fetch(`${baseUrl}/leads/?apiKey=${apiKey}&search=${encodeURIComponent(cleanName)}&_body=true`);
             if (res.ok) {
                 const data = await res.json();
                 let leads = [];
@@ -1048,7 +1050,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!apiKey) return;
 
         try {
-            const res = await fetch(`/io-api/leads/${leadId}?apiKey=${apiKey}&_body=true`);
+            const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '/io-api' : 'https://rental.software/api6';
+            const res = await fetch(`${baseUrl}/leads/${leadId}?apiKey=${apiKey}&_body=true`);
             if (res.ok) {
                 const fullLead = await res.json();
                 singleLeadCache.set(leadId, fullLead);
